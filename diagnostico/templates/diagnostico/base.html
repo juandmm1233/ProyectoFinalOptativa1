@@ -1,0 +1,57 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="BioCell AI — Diagnóstico automatizado de células sanguíneas mediante Machine Learning.">
+    <title>{% block title %}BioCell AI — Diagnóstico Inteligente{% endblock %}</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="{% static 'diagnostico/css/styles.css' %}">
+</head>
+<body>
+    <header class="topbar">
+        <div class="container topbar__inner">
+            <a href="{% url 'diagnostico:index' %}" class="brand">
+                <span class="brand__logo" aria-hidden="true">
+                    <svg viewBox="0 0 32 32" width="28" height="28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="16" cy="16" r="13" stroke="currentColor" stroke-width="2"/>
+                        <circle cx="16" cy="16" r="5" fill="currentColor" opacity="0.85"/>
+                        <circle cx="11" cy="11" r="1.6" fill="currentColor" opacity="0.45"/>
+                        <circle cx="22" cy="20" r="1.2" fill="currentColor" opacity="0.45"/>
+                    </svg>
+                </span>
+                <span class="brand__text">
+                    <span class="brand__title">BioCell <span class="brand__accent">AI</span></span>
+                    <span class="brand__subtitle">Diagnóstico Hematológico Asistido</span>
+                </span>
+            </a>
+            <nav class="topbar__nav" aria-label="Navegación principal">
+                <span class="status-pill" title="Modelo cargado en memoria">
+                    <span class="status-pill__dot"></span>
+                    Modelo activo
+                </span>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container footer__inner">
+            <p>© {% now "Y" %} BioCell AI · Sistema de apoyo diagnóstico basado en Random Forest.</p>
+            <p class="footer__note">Esta herramienta es de apoyo y no sustituye el criterio clínico profesional.</p>
+        </div>
+    </footer>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
