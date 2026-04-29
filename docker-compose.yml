@@ -1,0 +1,35 @@
+# =========================================================
+# BioCell AI — Orquestación con Docker Compose
+# Levanta el servicio web (Django + gunicorn) y mantiene
+# persistencia de la base SQLite en un volumen nombrado.
+# =========================================================
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: biocell-ai:latest
+    container_name: biocell-ai
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DJANGO_SETTINGS_MODULE: biocell_ai.settings
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      # Persistir la BD SQLite fuera del contenedor.
+      - biocell_db:/app/data
+      # (Opcional) montar el modelo entrenado desde el host para poder
+      # actualizarlo sin reconstruir la imagen. Coméntalo si prefieres
+      # que el .pkl viaje siempre dentro de la imagen.
+      - ./core/ml_models:/app/core/ml_models:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; \
+                                     sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:8000/').status == 200 else sys.exit(1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  biocell_db:

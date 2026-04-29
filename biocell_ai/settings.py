@@ -28,6 +28,9 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # WhiteNoise sirve los archivos estáticos cuando se ejecuta detrás de
+    # gunicorn (modo Docker / producción) sin necesidad de un nginx aparte.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -80,6 +83,17 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATICFILES_DIRS = []
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Almacenamiento comprimido y con manifiesto para WhiteNoise.
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

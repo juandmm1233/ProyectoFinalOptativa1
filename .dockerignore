@@ -1,0 +1,47 @@
+# Entornos virtuales locales
+venv/
+.venv/
+env/
+
+# Cachés de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Bases de datos y migraciones locales que no queremos llevarnos al contenedor
+db.sqlite3
+db.sqlite3-journal
+
+# Archivos del IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Control de versiones
+.git/
+.gitignore
+
+# Documentación / archivos accesorios que no son necesarios en runtime
+*.docx
+*.md
+!README.md
+
+# Archivos de entorno con secretos
+.env
+.env.*
+
+# Tests / cobertura
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Archivos estáticos recolectados (se generan dentro del contenedor)
+staticfiles/
+
+# Docker mismo
+Dockerfile
+docker-compose.yml
+.dockerignore

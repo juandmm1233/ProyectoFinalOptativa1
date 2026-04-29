@@ -29,9 +29,41 @@ class DiagnosticoConfig(AppConfig):
     # Atributo de clase que mantiene la instancia del modelo en memoria.
     ml_model: Any = None
 
-    # Nombres de las features esperadas por el modelo, en el orden correcto.
-    # Si tu .pkl fue entrenado con otros nombres, ajústalos aquí y en forms.py.
-    feature_names: list[str] = ["area", "perimetro", "concavidad", "textura"]
+    # Nombres de las 27 features que el modelo Random Forest espera, en orden.
+    # El formulario solo recoge 4 de ellas (Area, Perímetro, Concavidad, Textura);
+    # el resto se rellenan con 0.0 al momento de predecir.
+    feature_names: list[str] = [
+        "cell_diameter_um",
+        "nucleus_area_pct",
+        "chromatin_density",
+        "cytoplasm_ratio",
+        "circularity",
+        "eccentricity",
+        "granularity_score",
+        "lobularity_score",
+        "membrane_smoothness",
+        "cell_area_px",
+        "perimeter_px",
+        "mean_r",
+        "mean_g",
+        "mean_b",
+        "stain_intensity",
+        "wbc_count_per_ul",
+        "rbc_count_millions_per_ul",
+        "hemoglobin_g_dl",
+        "hematocrit_pct",
+        "platelet_count_per_ul",
+        "mcv_fl",
+        "mchc_g_dl",
+        "magnification_x",
+        "image_resolution_px",
+        "cytodiffusion_anomaly_score",
+        "cytodiffusion_classification_confidence",
+        "labeller_confidence_score",
+    ]
+
+    # Total de features esperadas por el modelo.
+    n_features: int = 27
 
     def ready(self) -> None:  # noqa: D401
         """Carga el modelo cuando Django termina de inicializar la app."""

@@ -13,7 +13,6 @@ import logging
 from typing import Any
 
 import numpy as np
-import pandas as pd
 from django.apps import apps
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -65,18 +64,17 @@ def predecir(request):
         )
 
     datos = form.cleaned_data
-    feature_names: list[str] = config.feature_names
+    n_features: int = getattr(config, "n_features", 27)
 
-    try:
-        x = pd.DataFrame(
-            [[datos["area"], datos["perimetro"], datos["concavidad"], datos["textura"]]],
-            columns=feature_names,
-        )
-    except Exception:  # noqa: BLE001
-        x = np.array(
-            [[datos["area"], datos["perimetro"], datos["concavidad"], datos["textura"]]],
-            dtype=float,
-        )
+    # El modelo Random Forest fue entrenado con 27 features, pero el formulario
+    # solo expone 4 (Area, Perímetro, Concavidad, Textura). Construimos un
+    # vector de ceros de forma (1, 27) y colocamos los 4 valores del usuario
+    # en las primeras 4 posiciones; las 23 restantes quedan en 0.0.
+    x = np.zeros((1, n_features), dtype=float)
+    x[0, 0] = datos["area"]
+    x[0, 1] = datos["perimetro"]
+    x[0, 2] = datos["concavidad"]
+    x[0, 3] = datos["textura"]
 
     try:
         prediccion = modelo.predict(x)[0]
