@@ -23,6 +23,71 @@ from .forms import CelulaForm
 logger = logging.getLogger(__name__)
 
 
+# ---------------------------------------------------------------------------
+# Vector base (imputación) para las 27 features que espera el modelo.
+#
+# El modelo Random Forest fue entrenado con un contexto hematológico
+# completo. Si lo alimentamos con ceros, el ejemplo se sale por completo
+# de la distribución de entrenamiento y la salida queda sesgada hacia
+# "Normal". Por eso construimos un vector inicial con valores promedio
+# de un adulto sano y luego sobrescribimos los índices correspondientes
+# con los 4 datos morfológicos que aporta el formulario.
+#
+# Orden de las 27 features (definido también en DiagnosticoConfig):
+#   0  cell_diameter_um                 14 stain_intensity
+#   1  nucleus_area_pct                 15 wbc_count_per_ul          [CLÍNICO]
+#   2  chromatin_density   ← Textura    16 rbc_count_millions_per_ul
+#   3  cytoplasm_ratio                  17 hemoglobin_g_dl            [CLÍNICO]
+#   4  circularity         ← Concavidad 18 hematocrit_pct             [CLÍNICO]
+#   5  eccentricity                     19 platelet_count_per_ul
+#   6  granularity_score                20 mcv_fl                     [CLÍNICO]
+#   7  lobularity_score                 21 mchc_g_dl
+#   8  membrane_smoothness              22 magnification_x
+#   9  cell_area_px        ← Area       23 image_resolution_px
+#  10  perimeter_px        ← Perímetro  24 cytodiffusion_anomaly_score
+#  11  mean_r                           25 cytodiffusion_classification_confidence
+#  12  mean_g                           26 labeller_confidence_score
+#  13  mean_b
+# ---------------------------------------------------------------------------
+FEATURE_BASELINE: list[float] = [
+    1.0,      # 0  cell_diameter_um
+    1.0,      # 1  nucleus_area_pct
+    0.5,      # 2  chromatin_density           (sobrescrito por Textura)
+    0.5,      # 3  cytoplasm_ratio
+    0.5,      # 4  circularity                 (sobrescrito por Concavidad)
+    0.5,      # 5  eccentricity
+    0.5,      # 6  granularity_score
+    0.5,      # 7  lobularity_score
+    0.5,      # 8  membrane_smoothness
+    1.0,      # 9  cell_area_px                (sobrescrito por Area)
+    1.0,      # 10 perimeter_px                (sobrescrito por Perímetro)
+    1.0,      # 11 mean_r
+    1.0,      # 12 mean_g
+    1.0,      # 13 mean_b
+    0.5,      # 14 stain_intensity
+    7000.0,   # 15 wbc_count_per_ul             [CLÍNICO]
+    1.0,      # 16 rbc_count_millions_per_ul
+    14.0,     # 17 hemoglobin_g_dl              [CLÍNICO]
+    42.0,     # 18 hematocrit_pct               [CLÍNICO]
+    1.0,      # 19 platelet_count_per_ul
+    90.0,     # 20 mcv_fl                       [CLÍNICO]
+    1.0,      # 21 mchc_g_dl
+    1.0,      # 22 magnification_x
+    1.0,      # 23 image_resolution_px
+    0.5,      # 24 cytodiffusion_anomaly_score
+    0.5,      # 25 cytodiffusion_classification_confidence
+    1.0,      # 26 labeller_confidence_score
+]
+assert len(FEATURE_BASELINE) == 27, "FEATURE_BASELINE debe tener 27 elementos."
+
+# Índices dentro del vector de 27 donde se inyectan los datos del formulario.
+# Si decides reasignar la correspondencia semántica solo cambias estos enteros.
+INDEX_AREA: int = 9          # cell_area_px
+INDEX_PERIMETRO: int = 10    # perimeter_px
+INDEX_CONCAVIDAD: int = 4    # circularity         (proxy morfológico)
+INDEX_TEXTURA: int = 2       # chromatin_density   (proxy de textura visual)
+
+
 @require_GET
 def index(request):
     """Renderiza la página principal con el formulario."""
@@ -64,17 +129,18 @@ def predecir(request):
         )
 
     datos = form.cleaned_data
-    n_features: int = getattr(config, "n_features", 27)
 
-    # El modelo Random Forest fue entrenado con 27 features, pero el formulario
-    # solo expone 4 (Area, Perímetro, Concavidad, Textura). Construimos un
-    # vector de ceros de forma (1, 27) y colocamos los 4 valores del usuario
-    # en las primeras 4 posiciones; las 23 restantes quedan en 0.0.
-    x = np.zeros((1, n_features), dtype=float)
-    x[0, 0] = datos["area"]
-    x[0, 1] = datos["perimetro"]
-    x[0, 2] = datos["concavidad"]
-    x[0, 3] = datos["textura"]
+    # 1) Partimos del vector base con valores clínicos/morfológicos típicos
+    #    de un adulto sano (evita el sesgo "todo cero → siempre Normal").
+    # 2) Inyectamos los 4 datos del formulario en sus posiciones reales
+    #    dentro de las 27 features que espera el modelo.
+    x = np.array([FEATURE_BASELINE], dtype=float)  # shape (1, 27)
+    x[0, INDEX_AREA] = datos["area"]
+    x[0, INDEX_PERIMETRO] = datos["perimetro"]
+    x[0, INDEX_CONCAVIDAD] = datos["concavidad"]
+    x[0, INDEX_TEXTURA] = datos["textura"]
+
+    assert x.shape == (1, 27), f"Se esperaba shape (1, 27), se obtuvo {x.shape}"
 
     try:
         prediccion = modelo.predict(x)[0]
