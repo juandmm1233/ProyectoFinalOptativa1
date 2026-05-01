@@ -96,7 +96,7 @@ def predecir(request):
     scaler = config.ml_scaler
     features = config.ml_features
 
-    if modelo is None or scaler is None:
+    if modelo is None or scaler is None or not features:
         return JsonResponse(
             {"ok": False, "error": "Modelo no disponible en el servidor."},
             status=503,
