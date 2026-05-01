@@ -1,5 +1,5 @@
 /* =========================================================
-   BioCell AI — Lógica del frontend (v2 — 24 features + JSON)
+   BioCell AI — Frontend (formulario + JSON, tarjetas / tabla)
    ========================================================= */
 
 (function () {
@@ -15,6 +15,63 @@
     const jsonFileName = document.getElementById("json-file-name");
     const btnJsonAnalizar = document.getElementById("btn-json-analizar");
     const btnJsonLimpiar = document.getElementById("btn-json-limpiar");
+
+    /** Orden estable para el resumen de variables (coincide con el modelo). */
+    const FEATURE_DISPLAY_ORDER = [
+        "cell_diameter_um",
+        "nucleus_area_pct",
+        "chromatin_density",
+        "cytoplasm_ratio",
+        "circularity",
+        "eccentricity",
+        "granularity_score",
+        "lobularity_score",
+        "membrane_smoothness",
+        "cell_area_px",
+        "perimeter_px",
+        "mean_r",
+        "mean_g",
+        "mean_b",
+        "stain_intensity",
+        "wbc_count_per_ul",
+        "rbc_count_millions_per_ul",
+        "hemoglobin_g_dl",
+        "hematocrit_pct",
+        "platelet_count_per_ul",
+        "mcv_fl",
+        "mchc_g_dl",
+        "patient_age_group",
+        "patient_sex",
+    ];
+
+    const VAR_LABELS = {
+        cell_diameter_um: "Diámetro celular (μm)",
+        nucleus_area_pct: "Área núcleo (%)",
+        chromatin_density: "Densidad cromatina",
+        cytoplasm_ratio: "Ratio citoplasma",
+        circularity: "Circularidad",
+        eccentricity: "Excentricidad",
+        granularity_score: "Granularidad",
+        lobularity_score: "Lobularidad",
+        membrane_smoothness: "Suavidad membrana",
+        cell_area_px: "Área celular (px)",
+        perimeter_px: "Perímetro (px)",
+        mean_r: "Color medio R",
+        mean_g: "Color medio G",
+        mean_b: "Color medio B",
+        stain_intensity: "Intensidad tinción",
+        wbc_count_per_ul: "Leucocitos (WBC/μL)",
+        rbc_count_millions_per_ul: "Eritrocitos (millones/μL)",
+        hemoglobin_g_dl: "Hemoglobina (g/dL)",
+        hematocrit_pct: "Hematocrito (%)",
+        platelet_count_per_ul: "Plaquetas (/μL)",
+        mcv_fl: "VCM — MCV (fL)",
+        mchc_g_dl: "CHCM — MCHC (g/dL)",
+        patient_age_group: "Grupo de edad (0–3)",
+        patient_sex: "Sexo (0 F / 1 M)",
+    };
+
+    const UMBRAL_TABLA = 3;
 
     if (!form || !resultadoCard) return;
 
@@ -125,6 +182,7 @@
     }
 
     function renderResultado(data, datosFuente) {
+        resultadoCard.removeAttribute("data-multi-layout");
         const esNormal = data.es_normal === true;
         const tipo = esNormal ? "normal" : "anormal";
         resultadoCard.setAttribute("data-result", tipo);
@@ -169,40 +227,202 @@
         setState("success");
     }
 
-    function renderBatch(resultados) {
-        const tbody = resultadoCard.querySelector("[data-batch-tbody]");
-        const summary = resultadoCard.querySelector("[data-batch-summary]");
-        if (!tbody || !summary) return;
+    function escapeHtml(s) {
+        const div = document.createElement("div");
+        div.textContent = s;
+        return div.innerHTML;
+    }
 
-        const okN = resultados.filter((r) => r.ok).length;
-        summary.textContent = `${okN} de ${resultados.length} muestra(s) analizadas correctamente.`;
+    /**
+     * SVG inline — célula sana (simétrica, estilo orgánico limpio / Plague-like UI).
+     */
+    function svgCellHealthy() {
+        return (
+            '<svg class="result-card__svg result-card__svg--healthy" ' +
+                'viewBox="0 0 80 80" width="56" height="56" ' +
+                'aria-hidden="true" focusable="false">' +
+            '<circle cx="40" cy="40" r="31" fill="rgba(34,197,94,0.12)" ' +
+                'stroke="#22c55e" stroke-width="2.2"/>' +
+            '<circle cx="40" cy="40" r="22" fill="rgba(22,163,74,0.18)" ' +
+                'stroke="#16a34a" stroke-width="1.2" opacity="0.95"/>' +
+            '<circle cx="40" cy="40" r="11" fill="rgba(21,128,61,0.55)" ' +
+                'stroke="#15803d" stroke-width="1"/>' +
+            '<circle cx="40" cy="40" r="5.5" fill="#166534" opacity="0.85"/>' +
+            '<ellipse cx="32" cy="30" rx="7" ry="4" fill="#ffffff" opacity="0.22"/>' +
+            '</svg>'
+        );
+    }
+
+    /**
+     * SVG inline — célula mutada (asimétrica, protuberancias, tonos carmesí).
+     */
+    function svgCellMutant() {
+        return (
+            '<svg class="result-card__svg result-card__svg--mutant" ' +
+                'viewBox="0 0 80 80" width="56" height="56" ' +
+                'aria-hidden="true" focusable="false">' +
+            '<path d="M40 6 C48 4 56 10 58 18 C66 20 72 30 68 40 C74 48 70 60 58 64 C54 74 42 78 30 72 C18 76 8 66 10 52 C2 44 4 28 16 22 C14 10 28 4 40 6 Z" ' +
+                'fill="rgba(220,38,38,0.15)" stroke="#b91c1c" stroke-width="2" ' +
+                'stroke-linejoin="round"/>' +
+            '<path d="M2 38 L8 32 L10 40 Z M78 36 L72 42 L70 34 Z M48 2 L52 10 L44 10 Z M26 74 L32 78 L30 70 Z" ' +
+                'fill="#991b1b" opacity="0.88" stroke="#7f1d1d" stroke-width="0.5"/>' +
+            '<path d="M40 16 C50 14 56 26 54 36 C56 46 46 54 36 52 C24 56 14 46 18 34 C14 22 26 14 40 16 Z" ' +
+                'fill="rgba(185,28,28,0.28)" stroke="#dc2626" stroke-width="1.4"/>' +
+            '<path d="M40 30 C44 28 48 34 46 40 C48 46 40 50 34 48 C28 52 22 42 26 36 C22 32 32 28 40 30 Z" ' +
+                'fill="rgba(69,10,10,0.55)" stroke="#450a0a" stroke-width="0.6"/>' +
+            '<ellipse cx="32" cy="36" rx="4" ry="5" transform="rotate(-18 32 36)" ' +
+                'fill="#7f1d1d" opacity="0.4"/>' +
+            '</svg>'
+        );
+    }
+
+    /** Icono neutro para muestras con error de validación. */
+    function svgCellUnknown() {
+        return (
+            '<svg class="result-card__svg result-card__svg--unknown" ' +
+                'viewBox="0 0 80 80" width="48" height="48" ' +
+                'aria-hidden="true" focusable="false">' +
+            '<circle cx="40" cy="40" r="28" fill="rgba(100,116,139,0.1)" ' +
+                'stroke="#94a3b8" stroke-width="2" stroke-dasharray="4 3"/>' +
+            '<path d="M40 24v20M40 52h0.01" stroke="#64748b" stroke-width="3" ' +
+                'stroke-linecap="round"/>' +
+            '</svg>'
+        );
+    }
+
+    function buildVariablesResumen(datos) {
+        if (!datos) return "";
+        const parts = [];
+        FEATURE_DISPLAY_ORDER.forEach((key) => {
+            if (!(key in datos)) return;
+            const label = VAR_LABELS[key] || key;
+            const val = formatNumero(datos[key]);
+            parts.push(
+                `<div class="result-card__grid-item">` +
+                    `<span class="result-card__grid-label">${escapeHtml(label)}</span>` +
+                    `<span class="result-card__grid-value">${escapeHtml(val)}</span>` +
+                `</div>`
+            );
+        });
+        return parts.join("");
+    }
+
+    function renderBatchCards(resultados) {
+        const wrap = resultadoCard.querySelector("[data-batch-cards]");
+        if (!wrap) return;
+
+        wrap.innerHTML = "";
+        resultados.forEach((r) => {
+            const article = document.createElement("article");
+            article.className = "result-card" + (r.ok ? "" : " result-card--error");
+            article.setAttribute("data-sample-index", String(r.indice + 1));
+
+            if (!r.ok) {
+                article.innerHTML =
+                    `<div class="result-card__top result-card__top--error">` +
+                    `<div class="result-card__cell-wrap result-card__cell-wrap--unknown" aria-hidden="true">` +
+                    svgCellUnknown() +
+                    `</div>` +
+                    `<div class="result-card__top-main">` +
+                    `<div class="result-card__head">` +
+                    `<span class="result-card__index">Muestra ${r.indice + 1}</span>` +
+                    `</div>` +
+                    `<p class="result-card__diag result-card__diag--error-label">No procesada</p>` +
+                    `</div></div>` +
+                    `<p class="result-card__err-msg">${escapeHtml(String(r.error || "Error desconocido"))}</p>`;
+            } else {
+                const esNormal = r.es_normal === true;
+                const clsDiag = esNormal ? "result-card__diag--normal" : "result-card__diag--anormal";
+                const clsProb = esNormal ? "result-card__prob-value--normal" : "result-card__prob-value--anormal";
+                const clsWrap = esNormal
+                    ? "result-card__cell-wrap result-card__cell-wrap--healthy"
+                    : "result-card__cell-wrap result-card__cell-wrap--mutant";
+                const iconSvg = esNormal ? svgCellHealthy() : svgCellMutant();
+                const probTxt = `${Number(r.probabilidad).toFixed(2)}%`;
+                const grid = buildVariablesResumen(r.datos);
+
+                article.innerHTML =
+                    `<div class="result-card__top">` +
+                    `<div class="${clsWrap}" aria-hidden="true">${iconSvg}</div>` +
+                    `<div class="result-card__top-main">` +
+                    `<div class="result-card__head">` +
+                    `<span class="result-card__index">Muestra ${r.indice + 1}</span>` +
+                    `</div>` +
+                    `<h3 class="result-card__diag ${clsDiag}">${escapeHtml(r.diagnostico)}</h3>` +
+                    `</div></div>` +
+                    `<dl class="result-card__meta">` +
+                    `<div><dt>Probabilidad (clase anomalía)</dt>` +
+                    `<dd class="${clsProb}">${escapeHtml(probTxt)}</dd></div>` +
+                    `<div><dt>Riesgo</dt><dd>${escapeHtml(String(r.riesgo))}</dd></div>` +
+                    `</dl>` +
+                    (grid ? `<div class="result-card__grid" role="group" aria-label="Variables de entrada">${grid}</div>` : "");
+            }
+            wrap.appendChild(article);
+        });
+    }
+
+    function renderBatchTable(resultados) {
+        const tbody = resultadoCard.querySelector("[data-batch-tbody]");
+        if (!tbody) return;
 
         tbody.innerHTML = "";
         resultados.forEach((r) => {
             const tr = document.createElement("tr");
             if (r.ok) {
-                tr.innerHTML = `
-                    <td class="num">${r.indice + 1}</td>
-                    <td><span class="tag-ok">OK</span></td>
-                    <td>${r.diagnostico}</td>
-                    <td class="num">${Number(r.probabilidad).toFixed(2)}%</td>
-                    <td>${r.riesgo}</td>`;
+                const esNormal = r.es_normal === true;
+                const cellCls = esNormal ? "result-table__cell--positive" : "result-table__cell--alert";
+                tr.innerHTML =
+                    `<td class="num">${r.indice + 1}</td>` +
+                    `<td><span class="tag-ok">OK</span></td>` +
+                    `<td class="${cellCls}">${escapeHtml(r.diagnostico)}</td>` +
+                    `<td class="num ${cellCls}">${Number(r.probabilidad).toFixed(2)}%</td>` +
+                    `<td>${escapeHtml(String(r.riesgo))}</td>`;
             } else {
-                tr.innerHTML = `
-                    <td class="num">${r.indice + 1}</td>
-                    <td><span class="tag-err">Error</span></td>
-                    <td colspan="3">${escapeHtml(String(r.error || "Error desconocido"))}</td>`;
+                tr.innerHTML =
+                    `<td class="num">${r.indice + 1}</td>` +
+                    `<td><span class="tag-err">Error</span></td>` +
+                    `<td colspan="3">${escapeHtml(String(r.error || "Error desconocido"))}</td>`;
             }
             tbody.appendChild(tr);
         });
-        resultadoCard.removeAttribute("data-result");
-        setState("success-batch");
     }
 
-    function escapeHtml(s) {
-        const div = document.createElement("div");
-        div.textContent = s;
-        return div.innerHTML;
+    function clearMultiDom() {
+        const cards = resultadoCard.querySelector("[data-batch-cards]");
+        const tbody = resultadoCard.querySelector("[data-batch-tbody]");
+        const summary = resultadoCard.querySelector("[data-batch-summary]");
+        if (cards) cards.innerHTML = "";
+        if (tbody) tbody.innerHTML = "";
+        if (summary) summary.textContent = "";
+        resultadoCard.removeAttribute("data-multi-layout");
+    }
+
+    /**
+     * Resultados del endpoint JSON: &lt;3 muestras → tarjetas; ≥3 → tabla con colores.
+     */
+    function renderJsonResults(lista) {
+        const tbody = resultadoCard.querySelector("[data-batch-tbody]");
+        const cards = resultadoCard.querySelector("[data-batch-cards]");
+        if (tbody) tbody.innerHTML = "";
+        if (cards) cards.innerHTML = "";
+
+        const summary = resultadoCard.querySelector("[data-batch-summary]");
+        const okN = lista.filter((x) => x.ok).length;
+        if (summary) {
+            summary.textContent = `${okN} de ${lista.length} muestra(s) analizadas correctamente.`;
+        }
+
+        resultadoCard.removeAttribute("data-result");
+
+        if (lista.length < UMBRAL_TABLA) {
+            resultadoCard.setAttribute("data-multi-layout", "cards");
+            renderBatchCards(lista);
+        } else {
+            resultadoCard.setAttribute("data-multi-layout", "table");
+            renderBatchTable(lista);
+        }
+
+        setState("success-batch");
     }
 
     function renderError(mensaje) {
@@ -257,10 +477,11 @@
     resetBtn.addEventListener("click", () => {
         clearFieldErrors();
         resultadoCard.removeAttribute("data-result");
+        resultadoCard.removeAttribute("data-multi-layout");
+        clearMultiDom();
         setState("empty");
     });
 
-    /* ---------- JSON ---------- */
     if (jsonFile && jsonInput) {
         jsonFile.addEventListener("change", () => {
             const f = jsonFile.files && jsonFile.files[0];
@@ -326,24 +547,7 @@
                 }
 
                 const lista = payload.resultados || [];
-                if (lista.length === 1) {
-                    const r = lista[0];
-                    if (r.ok) {
-                        renderResultado(
-                            {
-                                diagnostico: r.diagnostico,
-                                es_normal: r.es_normal,
-                                probabilidad: r.probabilidad,
-                                riesgo: r.riesgo,
-                            },
-                            r.datos || null
-                        );
-                    } else {
-                        renderError(r.error || "Error al procesar la muestra.");
-                    }
-                } else {
-                    renderBatch(lista);
-                }
+                renderJsonResults(lista);
             } catch (err) {
                 console.error(err);
                 renderError("No se pudo conectar con el servidor.");

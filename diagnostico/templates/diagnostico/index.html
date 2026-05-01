@@ -168,21 +168,28 @@ AI — Análisis de Célula{% endblock %} {% block content %}
       </div>
     </div>
 
-    <div class="result__batch" data-show-when="success-batch">
-      <p class="result__batch-summary" data-batch-summary></p>
-      <div class="table-wrap">
-        <table class="result-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Estado</th>
-              <th>Diagnóstico</th>
-              <th>Probabilidad</th>
-              <th>Riesgo</th>
-            </tr>
-          </thead>
-          <tbody data-batch-tbody></tbody>
-        </table>
+    <div class="result__multi" data-show-when="success-batch">
+      <p class="result__multi-summary" data-batch-summary></p>
+      <div
+        class="result__cards"
+        data-batch-cards
+        aria-label="Resultados por muestra"
+      ></div>
+      <div class="result__batch-table" data-batch-table>
+        <div class="table-wrap">
+          <table class="result-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Estado</th>
+                <th>Diagnóstico</th>
+                <th>Probabilidad</th>
+                <th>Riesgo</th>
+              </tr>
+            </thead>
+            <tbody data-batch-tbody></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </article>
