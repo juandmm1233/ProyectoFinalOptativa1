@@ -1,133 +1,177 @@
-{% extends "diagnostico/base.html" %}
-{% load static %}
-
-{% block title %}BioCell AI — Análisis de Célula{% endblock %}
-
-{% block content %}
+{% extends "diagnostico/base.html" %} {% load static %} {% block title %}BioCell
+AI — Análisis de Célula{% endblock %} {% block content %}
 <section class="hero">
-    <div class="hero__text">
-        <span class="eyebrow">Inteligencia Artificial Clínica</span>
-        <h1 class="hero__title">Diagnóstico automatizado de <span class="hero__highlight">células sanguíneas</span></h1>
-        <p class="hero__lead">
-            Ingresa las características morfológicas de una célula y nuestro modelo
-            <strong>Random Forest</strong> determinará si presenta una morfología
-            <strong>Normal</strong> o <strong>Anormal</strong>, junto con la probabilidad asociada.
-        </p>
+  <div class="hero__text">
+    <span class="eyebrow">Inteligencia Artificial Clínica</span>
+    <h1 class="hero__title">
+      Diagnóstico automatizado de
+      <span class="hero__highlight">células sanguíneas</span>
+    </h1>
+    <p class="hero__lead">
+      Ingresa las características morfológicas de una célula y nuestro modelo
+      <strong>Random Forest</strong> determinará si presenta una morfología
+      <strong>Normal</strong> o <strong>Anormal</strong>, junto con la
+      probabilidad asociada.
+    </p>
+  </div>
+  <div class="hero__card" aria-hidden="true">
+    <div class="hero__metric">
+      <span class="hero__metric-label">Variables analizadas</span>
+      <span class="hero__metric-value">24</span>
     </div>
-    <div class="hero__card" aria-hidden="true">
-        <div class="hero__metric">
-            <span class="hero__metric-label">Variables analizadas</span>
-            <span class="hero__metric-value">4</span>
-        </div>
-        <div class="hero__metric">
-            <span class="hero__metric-label">Algoritmo</span>
-            <span class="hero__metric-value">Random Forest</span>
-        </div>
-        <div class="hero__metric">
-            <span class="hero__metric-label">Tiempo de respuesta</span>
-            <span class="hero__metric-value">&lt; 1 s</span>
-        </div>
+    <div class="hero__metric">
+      <span class="hero__metric-label">Algoritmo</span>
+      <span class="hero__metric-value">Random Forest</span>
     </div>
+    <div class="hero__metric">
+      <span class="hero__metric-label">Tiempo de respuesta</span>
+      <span class="hero__metric-value">&lt; 1 s</span>
+    </div>
+  </div>
 </section>
 
 <section class="grid">
-    <article class="card card--form">
-        <header class="card__header">
-            <h2 class="card__title">Datos morfológicos</h2>
-            <p class="card__subtitle">
-                Completa los cuatro parámetros y presiona <strong>Analizar célula</strong>.
-            </p>
-        </header>
+  <article class="card card--form">
+    <header class="card__header">
+      <h2 class="card__title">Datos morfológicos</h2>
+      <p class="card__subtitle">
+        Completa los cuatro parámetros y presiona
+        <strong>Analizar célula</strong>.
+      </p>
+    </header>
 
-        <form id="form-celula" class="form" novalidate>
-            {% csrf_token %}
+    <form id="form-celula" class="form" novalidate>
+      {% csrf_token %}
 
-            <div class="form__grid">
-                {% for field in form %}
-                <div class="form__field">
-                    <label for="{{ field.id_for_label }}" class="form__label">
-                        {{ field.label }}
-                    </label>
-                    {{ field }}
-                    {% if field.help_text %}
-                        <small class="form__help">{{ field.help_text }}</small>
-                    {% endif %}
-                    <small class="form__error" data-error-for="{{ field.name }}"></small>
-                </div>
-                {% endfor %}
-            </div>
+      <div class="form__grid">
+        {% for field in form %}
+        <div class="form__field">
+          <label for="{{ field.id_for_label }}" class="form__label">
+            {{ field.label }}
+          </label>
+          {{ field }} {% if field.help_text %}
+          <small class="form__help">{{ field.help_text }}</small>
+          {% endif %}
+          <small class="form__error" data-error-for="{{ field.name }}"></small>
+        </div>
+        {% endfor %}
+      </div>
 
-            <div class="form__actions">
-                <button type="submit" class="btn btn--primary" id="btn-submit">
-                    <span class="btn__label">Analizar célula</span>
-                    <span class="btn__spinner" aria-hidden="true"></span>
-                </button>
-                <button type="reset" class="btn btn--ghost" id="btn-reset">Limpiar</button>
-            </div>
-        </form>
-    </article>
+      <div class="form__actions">
+        <button type="submit" class="btn btn--primary" id="btn-submit">
+          <span class="btn__label">Analizar célula</span>
+          <span class="btn__spinner" aria-hidden="true"></span>
+        </button>
+        <button type="reset" class="btn btn--ghost" id="btn-reset">
+          Limpiar
+        </button>
+      </div>
+    </form>
+  </article>
 
-    <article class="card card--result" id="resultado" data-state="empty" aria-live="polite">
-        <header class="card__header">
-            <h2 class="card__title">Resultado del análisis</h2>
-            <p class="card__subtitle">El diagnóstico aparecerá aquí tras procesar los datos.</p>
-        </header>
+  <article
+    class="card card--result"
+    id="resultado"
+    data-state="empty"
+    aria-live="polite"
+  >
+    <header class="card__header">
+      <h2 class="card__title">Resultado del análisis</h2>
+      <p class="card__subtitle">
+        El diagnóstico aparecerá aquí tras procesar los datos.
+      </p>
+    </header>
 
-        <div class="result__empty" data-show-when="empty">
-            <div class="result__empty-icon" aria-hidden="true">
-                <svg viewBox="0 0 64 64" width="64" height="64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="32" cy="32" r="26" stroke="currentColor" stroke-width="2" stroke-dasharray="4 4"/>
-                    <circle cx="32" cy="32" r="10" fill="currentColor" opacity="0.15"/>
-                    <circle cx="32" cy="32" r="4" fill="currentColor" opacity="0.6"/>
-                </svg>
-            </div>
-            <p>Aún no se ha generado un diagnóstico.</p>
+    <div class="result__empty" data-show-when="empty">
+      <div class="result__empty-icon" aria-hidden="true">
+        <svg
+          viewBox="0 0 64 64"
+          width="64"
+          height="64"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <circle
+            cx="32"
+            cy="32"
+            r="26"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-dasharray="4 4"
+          />
+          <circle cx="32" cy="32" r="10" fill="currentColor" opacity="0.15" />
+          <circle cx="32" cy="32" r="4" fill="currentColor" opacity="0.6" />
+        </svg>
+      </div>
+      <p>Aún no se ha generado un diagnóstico.</p>
+    </div>
+
+    <div class="result__loading" data-show-when="loading">
+      <div class="loader" aria-hidden="true"></div>
+      <p>Analizando características celulares…</p>
+    </div>
+
+    <div class="result__error" data-show-when="error">
+      <span class="result__error-icon" aria-hidden="true">!</span>
+      <p data-error-message>Ocurrió un error.</p>
+    </div>
+
+    <div class="result__success" data-show-when="success">
+      <div class="result__badge" data-result-badge>
+        <span class="result__badge-status" data-result-status>—</span>
+      </div>
+
+      <div class="result__detail">
+        <h3 class="result__diagnosis" data-result-diagnosis>—</h3>
+        <p class="result__description" data-result-description>—</p>
+
+        <div class="result__progress">
+          <div class="result__progress-header">
+            <span>Probabilidad</span>
+            <span class="result__probability" data-result-probability>0%</span>
+          </div>
+          <div class="result__progress-track">
+            <div
+              class="result__progress-bar"
+              data-result-bar
+              style="width: 0%"
+            ></div>
+          </div>
         </div>
 
-        <div class="result__loading" data-show-when="loading">
-            <div class="loader" aria-hidden="true"></div>
-            <p>Analizando características celulares…</p>
-        </div>
-
-        <div class="result__error" data-show-when="error">
-            <span class="result__error-icon" aria-hidden="true">!</span>
-            <p data-error-message>Ocurrió un error.</p>
-        </div>
-
-        <div class="result__success" data-show-when="success">
-            <div class="result__badge" data-result-badge>
-                <span class="result__badge-status" data-result-status>—</span>
-            </div>
-
-            <div class="result__detail">
-                <h3 class="result__diagnosis" data-result-diagnosis>—</h3>
-                <p class="result__description" data-result-description>—</p>
-
-                <div class="result__progress">
-                    <div class="result__progress-header">
-                        <span>Probabilidad</span>
-                        <span class="result__probability" data-result-probability>0%</span>
-                    </div>
-                    <div class="result__progress-track">
-                        <div class="result__progress-bar" data-result-bar style="width: 0%"></div>
-                    </div>
-                </div>
-
-                <dl class="result__inputs">
-                    <div><dt>Área</dt><dd data-input-area>—</dd></div>
-                    <div><dt>Perímetro</dt><dd data-input-perimetro>—</dd></div>
-                    <div><dt>Concavidad</dt><dd data-input-concavidad>—</dd></div>
-                    <div><dt>Textura</dt><dd data-input-textura>—</dd></div>
-                </dl>
-            </div>
-        </div>
-    </article>
+        <dl class="result__inputs">
+          <div>
+            <dt>Diámetro celular</dt>
+            <dd data-input-cell_diameter_um>—</dd>
+          </div>
+          <div>
+            <dt>Área celular (px)</dt>
+            <dd data-input-cell_area_px>—</dd>
+          </div>
+          <div>
+            <dt>Perímetro (px)</dt>
+            <dd data-input-perimeter_px>—</dd>
+          </div>
+          <div>
+            <dt>Circularidad</dt>
+            <dd data-input-circularity>—</dd>
+          </div>
+          <div>
+            <dt>Excentricidad</dt>
+            <dd data-input-eccentricity>—</dd>
+          </div>
+          <div>
+            <dt>Hemoglobina</dt>
+            <dd data-input-hemoglobin_g_dl>—</dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+  </article>
 </section>
-{% endblock %}
-
-{% block extra_js %}
+{% endblock %} {% block extra_js %}
 <script>
-    window.BIOCELL_PREDICT_URL = "{% url 'diagnostico:predecir' %}";
+  window.BIOCELL_PREDICT_URL = "{% url 'diagnostico:predecir' %}";
 </script>
 <script src="{% static 'diagnostico/js/app.js' %}"></script>
 {% endblock %}

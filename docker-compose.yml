@@ -12,7 +12,7 @@ services:
     container_name: biocell-ai
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "8030:8030"
     environment:
       DJANGO_SETTINGS_MODULE: biocell_ai.settings
       PYTHONUNBUFFERED: "1"
@@ -25,7 +25,7 @@ services:
       - ./core/ml_models:/app/core/ml_models:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; \
-                                     sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:8000/').status == 200 else sys.exit(1)"]
+                                     sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:8030/').status == 200 else sys.exit(1)"]
       interval: 30s
       timeout: 5s
       retries: 3

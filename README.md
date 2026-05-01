@@ -68,10 +68,10 @@ pip install -r requirements.txt
 
 ```bash
 python manage.py migrate
-python manage.py runserver
+python manage.py runserver 8030
 ```
 
-Luego abre [http://127.0.0.1:8000/](http://127.0.0.1:8000/) en el navegador.
+Luego abre [http://127.0.0.1:8030/](http://127.0.0.1:8030/) en el navegador.
 
 Al iniciar el servidor, en la consola verás un mensaje similar a:
 
@@ -119,7 +119,7 @@ El proyecto incluye un `Dockerfile` y un `docker-compose.yml` listos para usar. 
 docker compose up --build
 ```
 
-Esto construye la imagen, levanta el servicio `web` y expone la aplicación en [http://localhost:8000](http://localhost:8000). Para ejecutarlo en segundo plano usa `-d`:
+Esto construye la imagen, levanta el servicio `web` y expone la aplicación en [http://localhost:8030](http://localhost:8030). Para ejecutarlo en segundo plano usa `-d`:
 
 ```bash
 docker compose up --build -d
@@ -131,7 +131,7 @@ docker compose down             # detener
 
 ```bash
 docker build -t biocell-ai .
-docker run --rm -p 8000:8000 --name biocell-ai biocell-ai
+docker run --rm -p 8030:8030 --name biocell-ai biocell-ai
 ```
 
 ### Detalles importantes

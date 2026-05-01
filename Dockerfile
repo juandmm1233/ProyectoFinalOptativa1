@@ -2,7 +2,7 @@
 # BioCell AI — Dockerfile
 # Imagen ligera basada en Python 3.12-slim que empaqueta
 # Django + el modelo Random Forest entrenado y lo expone
-# en el puerto 8000 mediante gunicorn.
+# en el puerto 8030 mediante gunicorn.
 # =========================================================
 FROM python:3.12-slim
 
@@ -43,12 +43,12 @@ USER biocell
 # Recolectar archivos estáticos para que WhiteNoise pueda servirlos.
 RUN python manage.py collectstatic --noinput
 
-EXPOSE 8000
+EXPOSE 8030
 
 # gunicorn como WSGI server. 3 workers es un valor sensato para empezar;
 # ajusta según los núcleos disponibles en producción (regla: 2 * CPU + 1).
 CMD ["gunicorn", "biocell_ai.wsgi:application", \
-     "--bind", "0.0.0.0:8000", \
+     "--bind", "0.0.0.0:8030", \
      "--workers", "3", \
      "--timeout", "60", \
      "--access-logfile", "-", \

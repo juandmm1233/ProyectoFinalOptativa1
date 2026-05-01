@@ -1,16 +1,13 @@
 /* =========================================================
-   BioCell AI — Lógica del frontend
-   - Validación cliente del formulario.
-   - Envío AJAX al endpoint Django.
-   - Renderizado dinámico del resultado.
+   BioCell AI — Lógica del frontend (v2 — 24 features)
    ========================================================= */
 
 (function () {
     "use strict";
 
-    const form = document.getElementById("form-celula");
-    const submitBtn = document.getElementById("btn-submit");
-    const resetBtn = document.getElementById("btn-reset");
+    const form        = document.getElementById("form-celula");
+    const submitBtn   = document.getElementById("btn-submit");
+    const resetBtn    = document.getElementById("btn-reset");
     const resultadoCard = document.getElementById("resultado");
 
     if (!form || !resultadoCard) return;
@@ -28,54 +25,47 @@
     }
 
     function setLoading(isLoading) {
-        if (isLoading) {
-            submitBtn.classList.add("is-loading");
-            submitBtn.disabled = true;
-        } else {
-            submitBtn.classList.remove("is-loading");
-            submitBtn.disabled = false;
-        }
+        submitBtn.classList.toggle("is-loading", isLoading);
+        submitBtn.disabled = isLoading;
     }
 
     function clearFieldErrors() {
-        form.querySelectorAll(".form__error").forEach(el => (el.textContent = ""));
+        form.querySelectorAll(".form__error").forEach(el => el.textContent = "");
         form.querySelectorAll(".form-input").forEach(el => el.classList.remove("is-invalid"));
     }
 
     function showFieldError(name, message) {
         const errorEl = form.querySelector(`[data-error-for="${name}"]`);
-        const input = form.querySelector(`[name="${name}"]`);
+        const input   = form.querySelector(`[name="${name}"]`);
         if (errorEl) errorEl.textContent = message;
-        if (input) input.classList.add("is-invalid");
+        if (input)   input.classList.add("is-invalid");
     }
 
+    // Validación de todos los campos numéricos — solo verifica que
+    // no estén vacíos y sean números válidos. Los rangos los valida Django.
     function validarCliente(formData) {
         let valido = true;
         clearFieldErrors();
 
-        const reglas = {
-            area:       { min: 0,  max: 10000, label: "Área" },
-            perimetro:  { min: 0,  max: 1000,  label: "Perímetro" },
-            concavidad: { min: 0,  max: 1,     label: "Concavidad" },
-            textura:    { min: 0,  max: 100,   label: "Textura" },
-        };
+        const camposNumericos = [
+            "cell_diameter_um", "nucleus_area_pct", "chromatin_density",
+            "cytoplasm_ratio", "circularity", "eccentricity",
+            "granularity_score", "lobularity_score", "membrane_smoothness",
+            "cell_area_px", "perimeter_px", "mean_r", "mean_g", "mean_b",
+            "stain_intensity", "wbc_count_per_ul", "rbc_count_millions_per_ul",
+            "hemoglobin_g_dl", "hematocrit_pct", "platelet_count_per_ul",
+            "mcv_fl", "mchc_g_dl",
+        ];
 
-        for (const campo in reglas) {
+        for (const campo of camposNumericos) {
             const valor = formData.get(campo);
             if (valor === null || valor === "") {
                 showFieldError(campo, "Este campo es obligatorio.");
                 valido = false;
                 continue;
             }
-            const num = Number(valor);
-            if (Number.isNaN(num)) {
+            if (Number.isNaN(Number(valor))) {
                 showFieldError(campo, "Debe ser un número válido.");
-                valido = false;
-                continue;
-            }
-            const r = reglas[campo];
-            if (num < r.min || num > r.max) {
-                showFieldError(campo, `${r.label} debe estar entre ${r.min} y ${r.max}.`);
                 valido = false;
             }
         }
@@ -100,30 +90,43 @@
         resultadoCard.setAttribute("data-result", tipo);
 
         const statusEl = resultadoCard.querySelector("[data-result-status]");
-        const diagEl = resultadoCard.querySelector("[data-result-diagnosis]");
-        const descEl = resultadoCard.querySelector("[data-result-description]");
-        const probEl = resultadoCard.querySelector("[data-result-probability]");
-        const barEl = resultadoCard.querySelector("[data-result-bar]");
+        const diagEl   = resultadoCard.querySelector("[data-result-diagnosis]");
+        const descEl   = resultadoCard.querySelector("[data-result-description]");
+        const probEl   = resultadoCard.querySelector("[data-result-probability]");
+        const barEl    = resultadoCard.querySelector("[data-result-bar]");
 
-        statusEl.textContent = esNormal ? "Normal" : "Anormal";
-        diagEl.textContent = data.diagnostico;
+        if (statusEl) statusEl.textContent = esNormal ? "Normal" : "Anormal";
+        if (diagEl)   diagEl.textContent   = data.diagnostico;
 
-        descEl.textContent = esNormal
-            ? "Las características morfológicas analizadas son consistentes con una célula sanguínea de aspecto normal."
-            : "Las características morfológicas analizadas presentan rasgos atípicos. Se recomienda revisión por un especialista.";
+        if (descEl) {
+            descEl.textContent = esNormal
+                ? "Las características morfológicas analizadas son consistentes con una célula sanguínea de aspecto normal."
+                : `Características atípicas detectadas. Riesgo: ${data.riesgo}. Se recomienda revisión por un especialista.`;
+        }
 
         const prob = Number(data.probabilidad) || 0;
-        probEl.textContent = `${prob.toFixed(2)}%`;
-        // Pequeño retardo para que la transición CSS se vea bien.
-        requestAnimationFrame(() => {
-            barEl.style.width = `${Math.min(100, Math.max(0, prob))}%`;
-        });
+        if (probEl) probEl.textContent = `${prob.toFixed(2)}%`;
+        if (barEl) {
+            requestAnimationFrame(() => {
+                barEl.style.width = `${Math.min(100, Math.max(0, prob))}%`;
+            });
+        }
 
-        const d = data.datos || {};
-        resultadoCard.querySelector("[data-input-area]").textContent = formatNumero(d.area);
-        resultadoCard.querySelector("[data-input-perimetro]").textContent = formatNumero(d.perimetro);
-        resultadoCard.querySelector("[data-input-concavidad]").textContent = formatNumero(d.concavidad);
-        resultadoCard.querySelector("[data-input-textura]").textContent = formatNumero(d.textura);
+        // Mostrar algunos datos clave en el resultado
+        const areaEl = resultadoCard.querySelector("[data-input-cell_area_px]");
+        const perEl  = resultadoCard.querySelector("[data-input-perimeter_px]");
+        const circEl = resultadoCard.querySelector("[data-input-circularity]");
+        const eccEl  = resultadoCard.querySelector("[data-input-eccentricity]");
+        const diamEl = resultadoCard.querySelector("[data-input-cell_diameter_um]");
+        const hemoEl = resultadoCard.querySelector("[data-input-hemoglobin_g_dl]");
+
+        const fd = new FormData(form);
+        if (areaEl) areaEl.textContent = formatNumero(fd.get("cell_area_px"));
+        if (perEl)  perEl.textContent  = formatNumero(fd.get("perimeter_px"));
+        if (circEl) circEl.textContent = formatNumero(fd.get("circularity"));
+        if (eccEl)  eccEl.textContent  = formatNumero(fd.get("eccentricity"));
+        if (diamEl) diamEl.textContent = formatNumero(fd.get("cell_diameter_um"));
+        if (hemoEl) hemoEl.textContent = formatNumero(fd.get("hemoglobin_g_dl"));
 
         setState("success");
     }
@@ -140,9 +143,7 @@
 
         const formData = new FormData(form);
 
-        if (!validarCliente(formData)) {
-            return;
-        }
+        if (!validarCliente(formData)) return;
 
         setLoading(true);
         setState("loading");
@@ -172,9 +173,10 @@
             }
 
             renderResultado(payload);
+
         } catch (err) {
             console.error(err);
-            renderError("No se pudo conectar con el servidor. Verifica tu conexión.");
+            renderError("No se pudo conectar con el servidor.");
         } finally {
             setLoading(false);
         }
@@ -185,4 +187,5 @@
         resultadoCard.removeAttribute("data-result");
         setState("empty");
     });
+
 })();

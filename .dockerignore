@@ -41,7 +41,4 @@ htmlcov/
 # Archivos estáticos recolectados (se generan dentro del contenedor)
 staticfiles/
 
-# Docker mismo
-Dockerfile
-docker-compose.yml
-.dockerignore
+# Nota: no ignorar Dockerfile/docker-compose aquí; el demonio los necesita en el contexto.
