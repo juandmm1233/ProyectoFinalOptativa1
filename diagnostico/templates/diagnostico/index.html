@@ -69,12 +69,41 @@ AI — Análisis de Célula{% endblock %} {% block content %}
     </form>
   </article>
 
-  <article
-    class="card card--result"
-    id="resultado"
-    data-state="empty"
-    aria-live="polite"
-  >
+  <div class="result-column">
+    <div class="result-toolbar no-print">
+      <button
+        type="button"
+        class="btn btn--export-pdf"
+        id="btn-export-pdf"
+        disabled
+        aria-disabled="true"
+        aria-label="Exportar resultado del análisis a PDF"
+      >
+        <svg
+          class="btn__icon-svg"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
+        </svg>
+        <span>Exportar Reporte a PDF</span>
+      </button>
+    </div>
+    <article
+      class="card card--result"
+      id="resultado"
+      data-state="empty"
+      aria-live="polite"
+    >
     <header class="card__header">
       <h2 class="card__title">Resultado del análisis</h2>
       <p class="card__subtitle">
@@ -192,7 +221,8 @@ AI — Análisis de Célula{% endblock %} {% block content %}
         </div>
       </div>
     </div>
-  </article>
+    </article>
+  </div>
 </section>
 
 <section class="section-json" aria-labelledby="json-panel-title">
@@ -240,5 +270,10 @@ AI — Análisis de Célula{% endblock %} {% block content %}
   window.BIOCELL_PREDICT_URL = "{% url 'diagnostico:predecir' %}";
   window.BIOCELL_PREDICT_JSON_URL = "{% url 'diagnostico:predecir_json' %}";
 </script>
+<script
+  src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"
+  crossorigin="anonymous"
+  referrerpolicy="no-referrer"
+></script>
 <script src="{% static 'diagnostico/js/app.js' %}"></script>
 {% endblock %}

@@ -15,6 +15,7 @@
     const jsonFileName = document.getElementById("json-file-name");
     const btnJsonAnalizar = document.getElementById("btn-json-analizar");
     const btnJsonLimpiar = document.getElementById("btn-json-limpiar");
+    const btnExportPdf = document.getElementById("btn-export-pdf");
 
     /** Orden estable para el resumen de variables (coincide con el modelo). */
     const FEATURE_DISPLAY_ORDER = [
@@ -85,6 +86,71 @@
 
     function setState(state) {
         resultadoCard.setAttribute("data-state", state);
+        syncExportPdfButton();
+    }
+
+    function syncExportPdfButton() {
+        if (!btnExportPdf || !resultadoCard) return;
+        const st = resultadoCard.getAttribute("data-state") || "empty";
+        const hasContent = st === "success" || st === "success-batch" || st === "error";
+        btnExportPdf.disabled = !hasContent;
+        btnExportPdf.setAttribute("aria-disabled", String(!hasContent));
+    }
+
+    function exportResultadoPdf() {
+        if (!resultadoCard || typeof html2pdf === "undefined") {
+            window.alert(
+                "No se pudo cargar la librería de PDF. Comprueba tu conexión y vuelve a intentar."
+            );
+            return;
+        }
+        const st = resultadoCard.getAttribute("data-state") || "empty";
+        if (st === "empty" || st === "loading") {
+            window.alert("Primero genera un resultado para poder exportarlo.");
+            return;
+        }
+
+        const opt = {
+            margin: 10,
+            filename: "Reporte_Diagnostico_BioCell.pdf",
+            image: { type: "jpeg", quality: 0.98 },
+            html2canvas: {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                letterRendering: true,
+                scrollY: 0,
+                windowWidth: document.documentElement.scrollWidth,
+            },
+            jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+            pagebreak: { mode: ["avoid-all", "css", "legacy"] },
+        };
+
+        btnExportPdf.classList.add("is-loading");
+        btnExportPdf.disabled = true;
+
+        const done = () => {
+            btnExportPdf.classList.remove("is-loading");
+            syncExportPdfButton();
+        };
+
+        try {
+            const worker = html2pdf().set(opt).from(resultadoCard);
+            const out = worker.save();
+            if (out && typeof out.then === "function") {
+                out.then(done).catch((err) => {
+                    console.error(err);
+                    window.alert("No se pudo generar el PDF. Inténtalo de nuevo.");
+                    done();
+                });
+            } else {
+                window.setTimeout(done, 800);
+            }
+        } catch (err) {
+            console.error(err);
+            window.alert("Error al iniciar la exportación a PDF.");
+            done();
+        }
     }
 
     function setLoading(isLoading) {
@@ -556,4 +622,9 @@
             }
         });
     }
+
+    if (btnExportPdf) {
+        btnExportPdf.addEventListener("click", exportResultadoPdf);
+    }
+    syncExportPdfButton();
 })();
