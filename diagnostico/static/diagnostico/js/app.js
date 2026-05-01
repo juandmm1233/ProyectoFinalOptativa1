@@ -427,38 +427,130 @@
         });
     }
 
-    function renderBatchTable(resultados) {
-        const tbody = resultadoCard.querySelector("[data-batch-tbody]");
-        if (!tbody) return;
+    /**
+     * Ícono de célula para cabecera de sección en vista tabla (PDF-friendly).
+     */
+    function wrapBatchSectionIcon(svgHtml, variant) {
+        const cellCls =
+            variant === "healthy"
+                ? "batch-doc-icon__cell batch-doc-icon__cell--healthy"
+                : "batch-doc-icon__cell batch-doc-icon__cell--mutant";
+        return `<div class="batch-doc-icon" aria-hidden="true"><div class="${cellCls}">${svgHtml}</div></div>`;
+    }
 
-        tbody.innerHTML = "";
-        resultados.forEach((r) => {
-            const tr = document.createElement("tr");
-            if (r.ok) {
-                const esNormal = r.es_normal === true;
-                const cellCls = esNormal ? "result-table__cell--positive" : "result-table__cell--alert";
-                tr.innerHTML =
-                    `<td class="num">${r.indice + 1}</td>` +
-                    `<td><span class="tag-ok">OK</span></td>` +
-                    `<td class="${cellCls}">${escapeHtml(r.diagnostico)}</td>` +
-                    `<td class="num ${cellCls}">${Number(r.probabilidad).toFixed(2)}%</td>` +
-                    `<td>${escapeHtml(String(r.riesgo))}</td>`;
-            } else {
-                tr.innerHTML =
-                    `<td class="num">${r.indice + 1}</td>` +
-                    `<td><span class="tag-err">Error</span></td>` +
-                    `<td colspan="3">${escapeHtml(String(r.error || "Error desconocido"))}</td>`;
-            }
-            tbody.appendChild(tr);
-        });
+    function htmlBatchTableRowOk(r, tone) {
+        const cellCls = tone === "normal" ? "result-table__cell--positive" : "result-table__cell--alert";
+        return (
+            `<tr>` +
+            `<td class="num">${r.indice + 1}</td>` +
+            `<td><span class="tag-ok">OK</span></td>` +
+            `<td class="${cellCls}">${escapeHtml(r.diagnostico)}</td>` +
+            `<td class="num ${cellCls}">${Number(r.probabilidad).toFixed(2)}%</td>` +
+            `<td>${escapeHtml(String(r.riesgo))}</td>` +
+            `</tr>`
+        );
+    }
+
+    function htmlBatchTableRowError(r) {
+        return (
+            `<tr>` +
+            `<td class="num">${r.indice + 1}</td>` +
+            `<td><span class="tag-err">Error</span></td>` +
+            `<td colspan="3">${escapeHtml(String(r.error || "Error desconocido"))}</td>` +
+            `</tr>`
+        );
+    }
+
+    function buildBatchTableWrap(rowsHtml) {
+        return (
+            `<div class="table-wrap batch-doc-table-wrap">` +
+            `<table class="result-table">` +
+            `<thead><tr>` +
+            `<th>#</th><th>Estado</th><th>Diagnóstico</th><th>Probabilidad</th><th>Riesgo</th>` +
+            `</tr></thead>` +
+            `<tbody>${rowsHtml}</tbody>` +
+            `</table></div>`
+        );
+    }
+
+    /**
+     * ≥3 muestras: encabezado para PDF, dos tablas (normal / anomalía) y errores aparte.
+     */
+    function renderBatchTable(resultados) {
+        const batchPro = resultadoCard.querySelector("[data-batch-pro]");
+        const dochead = resultadoCard.querySelector("[data-batch-dochead]");
+        if (!batchPro) return;
+
+        const resultadosNormales = resultados.filter((r) => r.ok && r.es_normal === true);
+        const resultadosAnormales = resultados.filter((r) => r.ok && r.es_normal !== true);
+        const resultadosConError = resultados.filter((r) => !r.ok);
+
+        if (dochead) {
+            dochead.hidden = false;
+            dochead.innerHTML =
+                `<div class="result__batch-dochead__inner">` +
+                `<h2 class="result__batch-dochead__title">BioCell AI</h2>` +
+                `<h4 class="result__batch-dochead__subtitle">Diagnóstico Hematológico Asistido</h4>` +
+                `<hr class="result__batch-dochead__rule" />` +
+                `</div>`;
+        }
+
+        const theadNormales = resultadosNormales.map((r) => htmlBatchTableRowOk(r, "normal")).join("");
+        const theadAnormales = resultadosAnormales.map((r) => htmlBatchTableRowOk(r, "anormal")).join("");
+        const theadErrores = resultadosConError.map((r) => htmlBatchTableRowError(r)).join("");
+
+        const emptyNormalMsg =
+            `<p class="batch-doc-section__empty"><i>En este lote no hay muestras clasificadas como normales.</i></p>`;
+        const emptyAnormalMsg =
+            `<p class="batch-doc-section__empty"><i>No se detectaron anomalías en este lote.</i></p>`;
+
+        const blockNormales =
+            `<section class="batch-doc-section" aria-labelledby="batch-h-normales">` +
+            `<div class="batch-doc-section__head">` +
+            `<h3 class="batch-doc-section__h3" id="batch-h-normales">Resultados Normales</h3>` +
+            wrapBatchSectionIcon(svgCellHealthy(), "healthy") +
+            `</div>` +
+            (resultadosNormales.length
+                ? buildBatchTableWrap(theadNormales)
+                : emptyNormalMsg) +
+            `</section>`;
+
+        const blockAnormales =
+            `<section class="batch-doc-section" aria-labelledby="batch-h-anormales">` +
+            `<div class="batch-doc-section__head">` +
+            `<h3 class="batch-doc-section__h3" id="batch-h-anormales">Resultados Anormales (Alerta)</h3>` +
+            wrapBatchSectionIcon(svgCellMutant(), "mutant") +
+            `</div>` +
+            (resultadosAnormales.length
+                ? buildBatchTableWrap(theadAnormales)
+                : emptyAnormalMsg) +
+            `</section>`;
+
+        let blockErrores = "";
+        if (resultadosConError.length) {
+            blockErrores =
+                `<section class="batch-doc-section batch-doc-section--errors" aria-labelledby="batch-h-err">` +
+                `<div class="batch-doc-section__head batch-doc-section__head--plain">` +
+                `<h3 class="batch-doc-section__h3" id="batch-h-err">Incidencias de procesamiento</h3>` +
+                `</div>` +
+                buildBatchTableWrap(theadErrores) +
+                `</section>`;
+        }
+
+        batchPro.innerHTML = blockNormales + blockAnormales + blockErrores;
     }
 
     function clearMultiDom() {
         const cards = resultadoCard.querySelector("[data-batch-cards]");
-        const tbody = resultadoCard.querySelector("[data-batch-tbody]");
+        const batchPro = resultadoCard.querySelector("[data-batch-pro]");
+        const dochead = resultadoCard.querySelector("[data-batch-dochead]");
         const summary = resultadoCard.querySelector("[data-batch-summary]");
         if (cards) cards.innerHTML = "";
-        if (tbody) tbody.innerHTML = "";
+        if (batchPro) batchPro.innerHTML = "";
+        if (dochead) {
+            dochead.innerHTML = "";
+            dochead.hidden = true;
+        }
         if (summary) summary.textContent = "";
         resultadoCard.removeAttribute("data-multi-layout");
     }
@@ -467,10 +559,15 @@
      * Resultados del endpoint JSON: &lt;3 muestras → tarjetas; ≥3 → tabla con colores.
      */
     function renderJsonResults(lista) {
-        const tbody = resultadoCard.querySelector("[data-batch-tbody]");
+        const batchPro = resultadoCard.querySelector("[data-batch-pro]");
+        const dochead = resultadoCard.querySelector("[data-batch-dochead]");
         const cards = resultadoCard.querySelector("[data-batch-cards]");
-        if (tbody) tbody.innerHTML = "";
+        if (batchPro) batchPro.innerHTML = "";
         if (cards) cards.innerHTML = "";
+        if (dochead) {
+            dochead.innerHTML = "";
+            dochead.hidden = true;
+        }
 
         const summary = resultadoCard.querySelector("[data-batch-summary]");
         const okN = lista.filter((x) => x.ok).length;
