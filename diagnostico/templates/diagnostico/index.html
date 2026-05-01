@@ -35,8 +35,8 @@ AI — Análisis de Célula{% endblock %} {% block content %}
     <header class="card__header">
       <h2 class="card__title">Datos morfológicos</h2>
       <p class="card__subtitle">
-        Completa los cuatro parámetros y presiona
-        <strong>Analizar célula</strong>.
+        Completa los campos y presiona <strong>Analizar célula</strong>, o usa
+        la sección inferior para pegar o subir un JSON.
       </p>
     </header>
 
@@ -167,11 +167,71 @@ AI — Análisis de Célula{% endblock %} {% block content %}
         </dl>
       </div>
     </div>
+
+    <div class="result__batch" data-show-when="success-batch">
+      <p class="result__batch-summary" data-batch-summary></p>
+      <div class="table-wrap">
+        <table class="result-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Estado</th>
+              <th>Diagnóstico</th>
+              <th>Probabilidad</th>
+              <th>Riesgo</th>
+            </tr>
+          </thead>
+          <tbody data-batch-tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </article>
+</section>
+
+<section class="section-json" aria-labelledby="json-panel-title">
+  <article class="card card--json">
+    <header class="card__header">
+      <h2 class="card__title" id="json-panel-title">Análisis desde JSON</h2>
+      <p class="card__subtitle">
+        Pega un objeto con las 24 variables, una lista de objetos, o
+        <code>{"muestras": [ {...}, ... ]}</code>. También puedes elegir un
+        archivo <code>.json</code>.
+      </p>
+    </header>
+    <div class="json-panel">
+      <label for="json-input" class="form__label">JSON</label>
+      <textarea
+        id="json-input"
+        class="json-input"
+        rows="10"
+        spellcheck="false"
+        placeholder='Ejemplo una muestra: { "cell_diameter_um": 12.5, "nucleus_area_pct": 35, ... }'
+      ></textarea>
+      <div class="json-panel__row">
+        <input
+          type="file"
+          id="json-file"
+          class="json-file-input"
+          accept=".json,application/json"
+        />
+        <span class="json-file-hint" id="json-file-name"></span>
+      </div>
+      <div class="form__actions json-panel__actions">
+        <button type="button" class="btn btn--primary" id="btn-json-analizar">
+          <span class="btn__label">Analizar desde JSON</span>
+          <span class="btn__spinner" aria-hidden="true"></span>
+        </button>
+        <button type="button" class="btn btn--ghost" id="btn-json-limpiar">
+          Vaciar JSON
+        </button>
+      </div>
+    </div>
   </article>
 </section>
 {% endblock %} {% block extra_js %}
 <script>
   window.BIOCELL_PREDICT_URL = "{% url 'diagnostico:predecir' %}";
+  window.BIOCELL_PREDICT_JSON_URL = "{% url 'diagnostico:predecir_json' %}";
 </script>
 <script src="{% static 'diagnostico/js/app.js' %}"></script>
 {% endblock %}

@@ -9,4 +9,5 @@ app_name = "diagnostico"
 urlpatterns = [
     path("", views.index, name="index"),
     path("predecir/", views.predecir, name="predecir"),
+    path("predecir-json/", views.predecir_json, name="predecir_json"),
 ]
