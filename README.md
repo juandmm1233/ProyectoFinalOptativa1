@@ -1,42 +1,48 @@
-BioCell AI
-Sistema web para el diagnóstico automatizado de células sanguíneas, construido sobre Django 5 y un modelo Random Forest pre‑entrenado (scikit-learn).
-La aplicación permite ingresar las características morfológicas de una célula y devuelve, mediante AJAX, un diagnóstico Normal o Anormal junto con la probabilidad asociada, todo dentro de una interfaz limpia y profesional con estilo Smart Casual médico.
+# BioCell AI
 
-✅ Historial de cambios y correcciones
-v2.0 — Reentrenamiento completo del modelo (03/05/2026)
-Problemas resueltos:
+**Sistema web para el diagnóstico automatizado de células sanguíneas**, construido sobre Django 5 y un modelo Random Forest pre‑entrenado (`scikit-learn`).
 
-Data Leakage grave en el modelo original (ia_celulas_sanguineas_rf_v1.pkl):
+La aplicación permite ingresar las características morfológicas de una célula y devuelve, mediante AJAX, un diagnóstico **Normal** o **Anormal** junto con la probabilidad asociada, todo dentro de una interfaz limpia y profesional con estilo *Smart Casual* médico.
 
-Las variables cytodiffusion_anomaly_score, cytodiffusion_classification_confidence, labeller_confidence_score, disease_category (correlación 0.83 con el target) y cell_type se generaron después de conocer el diagnóstico. El modelo hacía trampa → 100% accuracy falso.
+---
 
+## ✅ Historial de cambios y correcciones
 
-Valores escalados fuera de rango (error 19.93):
+### v2.0 — Reentrenamiento completo del modelo (03/05/2026)
 
-El StandardScaler recibía valores imposibles en los JSONs de prueba (fuera del rango real del dataset). Por ejemplo, stain_intensity: 2.1 cuando el máximo real es 1.0, o cell_area_px: 1200 cuando el máximo es 901.
-Esto generaba puntuaciones Z absurdas (19.93 desviaciones estándar) que el Random Forest clasificaba siempre como anomalía.
+**Problemas resueltos:**
 
+1. **Data Leakage grave en el modelo original** (`ia_celulas_sanguineas_rf_v1.pkl`):
+   - Las variables `cytodiffusion_anomaly_score`, `cytodiffusion_classification_confidence`, `labeller_confidence_score`, `disease_category` (correlación 0.83 con el target) y `cell_type` se generaron **después** de conocer el diagnóstico. El modelo hacía trampa → 100% accuracy falso.
 
-feature_names_in_: N/A:
+2. **Valores escalados fuera de rango (error 19.93)**:
+   - El `StandardScaler` recibía valores imposibles en los JSONs de prueba (fuera del rango real del dataset). Por ejemplo, `stain_intensity: 2.1` cuando el máximo real es `1.0`, o `cell_area_px: 1200` cuando el máximo es `901`.
+   - Esto generaba puntuaciones Z absurdas (19.93 desviaciones estándar) que el Random Forest clasificaba siempre como anomalía.
 
-El modelo anterior fue entrenado con X_train.values (ndarray puro), perdiendo los nombres de columnas. Si el orden del JSON no coincidía exactamente con el orden de entrenamiento, el modelo recibía las variables en posiciones equivocadas.
+3. **`feature_names_in_: N/A`**:
+   - El modelo anterior fue entrenado con `X_train.values` (ndarray puro), perdiendo los nombres de columnas. Si el orden del JSON no coincidía exactamente con el orden de entrenamiento, el modelo recibía las variables en posiciones equivocadas.
 
+**Solución aplicada:**
+- Reentrenamiento con **solo 24 features morfológicas y clínicas reales**, sin variables de leakage.
+- Entrenamiento con `modelo.fit(X_train, y_train)` pasando el DataFrame directamente → `feature_names_in_` guardado.
+- Tres archivos nuevos reemplazan al `.pkl` original: `modelo_anomalias.pkl`, `scaler_anomalias.pkl`, `features_modelo.json`.
 
+**Resultados del nuevo modelo:**
 
-Solución aplicada:
+| Enfoque | Accuracy | Observación |
+|---|---|---|
+| Con leakage total | 100.00% | ❌ Falso |
+| Sin disease_category | 99.91% | ❌ Aún con leakage |
+| **Modelo final limpio** | **96.94%** | ✅ Honesto y real |
 
-Reentrenamiento con solo 24 features morfológicas y clínicas reales, sin variables de leakage.
-Entrenamiento con modelo.fit(X_train, y_train) pasando el DataFrame directamente → feature_names_in_ guardado.
-Tres archivos nuevos reemplazan al .pkl original: modelo_anomalias.pkl, scaler_anomalias.pkl, features_modelo.json.
+- ROC-AUC: **0.9977**
+- Solo **36 errores** en 1176 predicciones
 
-Resultados del nuevo modelo:
-EnfoqueAccuracyObservaciónCon leakage total100.00%❌ FalsoSin disease_category99.91%❌ Aún con leakageModelo final limpio96.94%✅ Honesto y real
+---
 
-ROC-AUC: 0.9977
-Solo 36 errores en 1176 predicciones
+## Estructura del proyecto
 
-
-Estructura del proyecto
+```
 ProyectoFinalOptativa1/
 ├── manage.py
 ├── requirements.txt
@@ -71,39 +77,92 @@ ProyectoFinalOptativa1/
     └── static/diagnostico/
         ├── css/styles.css
         └── js/app.js
+```
 
-Requisitos
+---
 
-Python 3.11 o superior.
-scikit-learn 1.7.2 (versión con la que se entrenó el modelo).
-Los archivos modelo_anomalias.pkl, scaler_anomalias.pkl y features_modelo.json deben existir en core/ml_models/.
+## Requisitos
 
+- Python 3.11 o superior.
+- scikit-learn **1.7.2** (versión con la que se entrenó el modelo).
+- Los archivos `modelo_anomalias.pkl`, `scaler_anomalias.pkl` y `features_modelo.json` deben existir en `core/ml_models/`.
 
-Instalación
-bashpython -m venv env
+---
+
+## Instalación
+
+```bash
+python -m venv env
 env\Scripts\activate          # Windows (PowerShell)
 # source env/bin/activate     # macOS / Linux
 
 pip install -r requirements.txt
+```
 
-Ejecución
-bashpython manage.py migrate
+---
+
+## Ejecución
+
+```bash
+python manage.py migrate
 python manage.py runserver
-Luego abre http://127.0.0.1:8000/ en el navegador.
+```
 
-Rangos válidos de las variables
+Luego abre [http://127.0.0.1:8000/](http://127.0.0.1:8000/) en el navegador.
 
-⚠️ Los valores ingresados deben estar dentro del rango real del dataset de entrenamiento. Valores fuera de rango generan puntuaciones Z absurdas y predicciones incorrectas.
+---
 
-VariableMínimoMáximoUnidadcell_diameter_um~4~18μmnucleus_area_pct~5~90%chromatin_density0.01.0—cytoplasm_ratio~0.1~0.95—circularity~0.1~1.0—eccentricity~0.0~0.99—granularity_score~0.0~5.0—lobularity_score~0.0~5.0—membrane_smoothness~0.1~1.0—cell_area_px10901pxperimeter_px8128pxmean_r0255—mean_g0255—mean_b0255—stain_intensity0.3071.0—wbc_count_per_ul~2000~60000/μLrbc_count_millions_per_ul~1.5~6.5millones/μLhemoglobin_g_dl~5.0~18.0g/dLhematocrit_pct~15~55%platelet_count_per_ul~50000~999000/μLmcv_fl~60~120fLmchc_g_dl~25~38g/dLpatient_age_group0 = Adult1 = Elderly2 = Pediatricpatient_sex0 = F1 = M—
+## Rangos válidos de las variables
 
-Endpoints
-MétodoRutaDescripciónGET/Renderiza la interfaz con el formulario.POST/predecir/Recibe datos morfológicos (form) y devuelve JSON.POST/predecir-json/Acepta JSON crudo con una o varias muestras.
+> ⚠️ Los valores ingresados deben estar dentro del rango real del dataset de entrenamiento. Valores fuera de rango generan puntuaciones Z absurdas y predicciones incorrectas.
 
-Casos de prueba JSON
-Pega cualquiera de estos en la sección "Análisis desde JSON" de la interfaz.
-Prueba 1 — Adulto femenino normal → esperado: NORMAL 🟢
-json{
+| Variable | Mínimo | Máximo | Unidad |
+|---|---|---|---|
+| `cell_diameter_um` | ~4 | ~18 | μm |
+| `nucleus_area_pct` | ~5 | ~90 | % |
+| `chromatin_density` | 0.0 | 1.0 | — |
+| `cytoplasm_ratio` | ~0.1 | ~0.95 | — |
+| `circularity` | ~0.1 | ~1.0 | — |
+| `eccentricity` | ~0.0 | ~0.99 | — |
+| `granularity_score` | ~0.0 | ~5.0 | — |
+| `lobularity_score` | ~0.0 | ~5.0 | — |
+| `membrane_smoothness` | ~0.1 | ~1.0 | — |
+| `cell_area_px` | 10 | 901 | px |
+| `perimeter_px` | 8 | 128 | px |
+| `mean_r` | 0 | 255 | — |
+| `mean_g` | 0 | 255 | — |
+| `mean_b` | 0 | 255 | — |
+| `stain_intensity` | 0.307 | 1.0 | — |
+| `wbc_count_per_ul` | ~2000 | ~60000 | /μL |
+| `rbc_count_millions_per_ul` | ~1.5 | ~6.5 | millones/μL |
+| `hemoglobin_g_dl` | ~5.0 | ~18.0 | g/dL |
+| `hematocrit_pct` | ~15 | ~55 | % |
+| `platelet_count_per_ul` | ~50000 | ~999000 | /μL |
+| `mcv_fl` | ~60 | ~120 | fL |
+| `mchc_g_dl` | ~25 | ~38 | g/dL |
+| `patient_age_group` | 0 = Adult | 1 = Elderly | 2 = Pediatric |
+| `patient_sex` | 0 = F | 1 = M | — |
+
+---
+
+## Endpoints
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/` | Renderiza la interfaz con el formulario. |
+| POST | `/predecir/` | Recibe datos morfológicos (form) y devuelve JSON. |
+| POST | `/predecir-json/` | Acepta JSON crudo con una o varias muestras. |
+
+---
+
+## Casos de prueba JSON
+
+Pega cualquiera de estos en la sección **"Análisis desde JSON"** de la interfaz.
+
+### Prueba 1 — Adulto femenino normal → esperado: NORMAL 🟢
+
+```json
+{
   "cell_diameter_um": 7.8,
   "nucleus_area_pct": 30.0,
   "chromatin_density": 0.30,
@@ -129,8 +188,12 @@ json{
   "patient_age_group": 0,
   "patient_sex": 0
 }
-Prueba 2 — Pediátrico anómalo (leucemia) → esperado: ANORMAL 🔴
-json{
+```
+
+### Prueba 2 — Pediátrico anómalo (leucemia) → esperado: ANORMAL 🔴
+
+```json
+{
   "cell_diameter_um": 14.0,
   "nucleus_area_pct": 80.0,
   "chromatin_density": 0.92,
@@ -156,8 +219,12 @@ json{
   "patient_age_group": 2,
   "patient_sex": 1
 }
-Prueba 3 — Adulto mayor borderline → esperado: ANORMAL 🔴
-json{
+```
+
+### Prueba 3 — Adulto mayor borderline → esperado: ANORMAL 🔴
+
+```json
+{
   "cell_diameter_um": 9.5,
   "nucleus_area_pct": 45.0,
   "chromatin_density": 0.55,
@@ -183,8 +250,12 @@ json{
   "patient_age_group": 1,
   "patient_sex": 0
 }
-Prueba 4 — Adulto joven masculino sano → esperado: NORMAL 🟢
-json{
+```
+
+### Prueba 4 — Adulto joven masculino sano → esperado: NORMAL 🟢
+
+```json
+{
   "cell_diameter_um": 8.0,
   "nucleus_area_pct": 28.0,
   "chromatin_density": 0.25,
@@ -210,8 +281,12 @@ json{
   "patient_age_group": 0,
   "patient_sex": 1
 }
-Prueba 5 — Adulto mayor con anemia → esperado: ANORMAL 🔴
-json{
+```
+
+### Prueba 5 — Adulto mayor con anemia → esperado: ANORMAL 🔴
+
+```json
+{
   "cell_diameter_um": 11.0,
   "nucleus_area_pct": 60.0,
   "chromatin_density": 0.78,
@@ -237,8 +312,12 @@ json{
   "patient_age_group": 1,
   "patient_sex": 0
 }
-Prueba 6 — Pediátrico sano → esperado: NORMAL 🟢
-json{
+```
+
+### Prueba 6 — Pediátrico sano → esperado: NORMAL 🟢
+
+```json
+{
   "cell_diameter_um": 7.2,
   "nucleus_area_pct": 25.0,
   "chromatin_density": 0.22,
@@ -264,8 +343,12 @@ json{
   "patient_age_group": 2,
   "patient_sex": 0
 }
-Prueba múltiple — 3 muestras en una sola petición
-json{
+```
+
+### Prueba múltiple — 3 muestras en una sola petición
+
+```json
+{
   "muestras": [
     {
       "cell_diameter_um": 7.8, "nucleus_area_pct": 30.0, "chromatin_density": 0.30,
@@ -296,23 +379,38 @@ json{
     }
   ]
 }
+```
+
 Resultado esperado: Muestra 1 → Normal 🟢, Muestra 2 → Anormal 🔴, Muestra 3 → Normal 🟢
 
-Notas técnicas
+---
 
-Carga del modelo: se realiza en DiagnosticoConfig.ready() y queda disponible en apps.get_app_config("diagnostico").ml_model. Esto evita relectura del .pkl en cada petición.
-Vector de entrada: el modelo fue entrenado con 24 features morfológicas y clínicas. El orden exacto está en features_modelo.json y es respetado por views.py mediante pd.DataFrame([fila])[feats].
-Escalado: scaler_anomalias.pkl contiene el StandardScaler ajustado durante el entrenamiento. Siempre se aplica antes de llamar a modelo.predict().
-Versión de scikit-learn: el modelo fue entrenado con 1.7.2. El entorno debe tener la misma versión para evitar advertencias de compatibilidad.
-Validación: doble capa — cliente (JavaScript) y servidor (forms.CelulaForm).
+## Notas técnicas
 
+- **Carga del modelo**: se realiza en `DiagnosticoConfig.ready()` y queda disponible en `apps.get_app_config("diagnostico").ml_model`. Esto evita relectura del `.pkl` en cada petición.
+- **Vector de entrada**: el modelo fue entrenado con **24 features morfológicas y clínicas**. El orden exacto está en `features_modelo.json` y es respetado por `views.py` mediante `pd.DataFrame([fila])[feats]`.
+- **Escalado**: `scaler_anomalias.pkl` contiene el `StandardScaler` ajustado durante el entrenamiento. Siempre se aplica **antes** de llamar a `modelo.predict()`.
+- **Versión de scikit-learn**: el modelo fue entrenado con `1.7.2`. El entorno debe tener la misma versión para evitar advertencias de compatibilidad.
+- **Validación**: doble capa — cliente (JavaScript) y servidor (`forms.CelulaForm`).
 
-Despliegue con Docker
-bashdocker compose up --build
-Accede en http://localhost:8030.
-bashdocker compose up --build -d     # segundo plano
+---
+
+## Despliegue con Docker
+
+```bash
+docker compose up --build
+```
+
+Accede en [http://localhost:8030](http://localhost:8030).
+
+```bash
+docker compose up --build -d     # segundo plano
 docker compose logs -f web       # ver logs
 docker compose down              # detener
+```
 
-Aviso
-Esta herramienta es un sistema de apoyo diagnóstico y no sustituye el criterio clínico de un profesional de la salud.
+---
+
+## Aviso
+
+Esta herramienta es un **sistema de apoyo diagnóstico** y **no sustituye** el criterio clínico de un profesional de la salud.
