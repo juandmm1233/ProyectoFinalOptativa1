@@ -1,5 +1,9 @@
-{% extends "diagnostico/base.html" %} {% load static %} {% block title %}BioCell
-AI — Análisis de Célula{% endblock %} {% block content %}
+{% extends "diagnostico/base.html" %}
+{% load static %}
+
+{% block title %}BioCell AI — Análisis de Célula{% endblock %}
+
+{% block content %}
 <section class="hero">
   <div class="hero__text">
     <span class="eyebrow">Inteligencia Artificial Clínica</span>
@@ -30,230 +34,237 @@ AI — Análisis de Célula{% endblock %} {% block content %}
   </div>
 </section>
 
-<section class="grid">
-  <article class="card card--form">
-    <header class="card__header">
-      <h2 class="card__title">Datos morfológicos</h2>
-      <p class="card__subtitle">
-        Completa los campos y presiona <strong>Analizar célula</strong>, o usa
-        la sección inferior para pegar o subir un JSON.
-      </p>
-    </header>
+<div class="dashboard-layout">
+  <div class="dashboard-panel dashboard-panel--inputs">
+    <article class="card card--form card--in-dashboard">
+      <header class="card__header">
+        <h2 class="card__title">Datos morfológicos</h2>
+        <p class="card__subtitle">
+          Completa los campos y presiona <strong>Analizar célula</strong>, o usa
+          la sección inferior para pegar o subir un JSON.
+        </p>
+      </header>
 
-    <form id="form-celula" class="form" novalidate>
-      {% csrf_token %}
+      <form id="form-celula" class="form" novalidate>
+        {% csrf_token %}
 
-      <div class="form__grid">
-        {% for field in form %}
-        <div class="form__field">
-          <label for="{{ field.id_for_label }}" class="form__label">
-            {{ field.label }}
-          </label>
-          {{ field }} {% if field.help_text %}
-          <small class="form__help">{{ field.help_text }}</small>
-          {% endif %}
-          <small class="form__error" data-error-for="{{ field.name }}"></small>
+        <div class="form__grid">
+          {% for field in form %}
+          <div class="form__field">
+            <label for="{{ field.id_for_label }}" class="form__label">
+              {{ field.label }}
+            </label>
+            {{ field }}
+            {% if field.help_text %}
+            <small class="form__help">{{ field.help_text }}</small>
+            {% endif %}
+            <small class="form__error" data-error-for="{{ field.name }}"></small>
+          </div>
+          {% endfor %}
         </div>
-        {% endfor %}
-      </div>
 
-      <div class="form__actions">
-        <button type="submit" class="btn btn--primary" id="btn-submit">
-          <span class="btn__label">Analizar célula</span>
-          <span class="btn__spinner" aria-hidden="true"></span>
-        </button>
-        <button type="reset" class="btn btn--ghost" id="btn-reset">
-          Limpiar
-        </button>
-      </div>
-    </form>
-  </article>
+        <div class="form__actions">
+          <button type="submit" class="btn btn--primary" id="btn-submit">
+            <span class="btn__label">Analizar célula</span>
+            <span class="btn__spinner" aria-hidden="true"></span>
+          </button>
+          <button type="reset" class="btn btn--ghost" id="btn-reset">
+            Limpiar
+          </button>
+        </div>
+      </form>
+    </article>
 
-  <div class="result-column">
-    <div class="result-toolbar no-print">
-      <button
-        type="button"
-        class="btn btn--export-pdf"
-        id="btn-export-pdf"
-        disabled
-        aria-disabled="true"
-        aria-label="Exportar resultado del análisis a PDF"
-      >
-        <svg
-          class="btn__icon-svg"
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
+    <section class="section-json section-json--in-dashboard" aria-labelledby="json-panel-title">
+      <article class="card card--json card--in-dashboard">
+        <header class="card__header">
+          <h2 class="card__title" id="json-panel-title">Análisis desde JSON</h2>
+          <p class="card__subtitle">
+            Pega un objeto con las 24 variables, una lista de objetos, o
+            <code>{"muestras": [ {...}, ... ]}</code>. También puedes elegir un
+            archivo <code>.json</code>.
+          </p>
+        </header>
+        <div class="json-panel">
+          <label for="json-input" class="form__label">JSON</label>
+          <textarea
+            id="json-input"
+            class="json-input"
+            rows="10"
+            spellcheck="false"
+            placeholder='Ejemplo una muestra: { "cell_diameter_um": 12.5, "nucleus_area_pct": 35, ... }'
+          ></textarea>
+          <div class="json-panel__row">
+            <input
+              type="file"
+              id="json-file"
+              class="json-file-input"
+              accept=".json,application/json"
+            />
+            <span class="json-file-hint" id="json-file-name"></span>
+          </div>
+          <div class="form__actions json-panel__actions">
+            <button type="button" class="btn btn--primary" id="btn-json-analizar">
+              <span class="btn__label">Analizar desde JSON</span>
+              <span class="btn__spinner" aria-hidden="true"></span>
+            </button>
+            <button type="button" class="btn btn--ghost" id="btn-json-limpiar">
+              Vaciar JSON
+            </button>
+          </div>
+        </div>
+      </article>
+    </section>
+  </div>
+
+  <div class="dashboard-panel dashboard-panel--results">
+    <div class="result-column">
+      <div class="result-toolbar no-print">
+        <button
+          type="button"
+          class="btn btn--export-pdf"
+          id="btn-export-pdf"
+          disabled
+          aria-disabled="true"
+          aria-label="Exportar resultado del análisis a PDF"
         >
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-          <polyline points="7 10 12 15 17 10" />
-          <line x1="12" y1="15" x2="12" y2="3" />
-        </svg>
-        <span>Exportar Reporte a PDF</span>
-      </button>
-    </div>
-    <article
-      class="card card--result"
-      id="resultado"
-      data-state="empty"
-      aria-live="polite"
-    >
-    <header class="card__header">
-      <h2 class="card__title">Resultado del análisis</h2>
-      <p class="card__subtitle">
-        El diagnóstico aparecerá aquí tras procesar los datos.
-      </p>
-    </header>
-
-    <div class="result__empty" data-show-when="empty">
-      <div class="result__empty-icon" aria-hidden="true">
-        <svg
-          viewBox="0 0 64 64"
-          width="64"
-          height="64"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <circle
-            cx="32"
-            cy="32"
-            r="26"
+          <svg
+            class="btn__icon-svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
             stroke="currentColor"
             stroke-width="2"
-            stroke-dasharray="4 4"
-          />
-          <circle cx="32" cy="32" r="10" fill="currentColor" opacity="0.15" />
-          <circle cx="32" cy="32" r="4" fill="currentColor" opacity="0.6" />
-        </svg>
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          <span>Exportar Reporte a PDF</span>
+        </button>
       </div>
-      <p>Aún no se ha generado un diagnóstico.</p>
-    </div>
+      <article
+        class="card card--result card--in-dashboard"
+        id="resultado"
+        data-state="empty"
+        aria-live="polite"
+      >
+        <header class="card__header">
+          <h2 class="card__title">Resultado del análisis</h2>
+          <p class="card__subtitle">
+            El diagnóstico aparecerá aquí tras procesar los datos.
+          </p>
+        </header>
 
-    <div class="result__loading" data-show-when="loading">
-      <div class="loader" aria-hidden="true"></div>
-      <p>Analizando características celulares…</p>
-    </div>
-
-    <div class="result__error" data-show-when="error">
-      <span class="result__error-icon" aria-hidden="true">!</span>
-      <p data-error-message>Ocurrió un error.</p>
-    </div>
-
-    <div class="result__success" data-show-when="success">
-      <div class="result__badge" data-result-badge>
-        <span class="result__badge-status" data-result-status>—</span>
-      </div>
-
-      <div class="result__detail">
-        <h3 class="result__diagnosis" data-result-diagnosis>—</h3>
-        <p class="result__description" data-result-description>—</p>
-
-        <div class="result__progress">
-          <div class="result__progress-header">
-            <span>Probabilidad</span>
-            <span class="result__probability" data-result-probability>0%</span>
+        <div class="result__empty" data-show-when="empty">
+          <div class="result__empty-icon" aria-hidden="true">
+            <svg
+              viewBox="0 0 64 64"
+              width="64"
+              height="64"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="32"
+                cy="32"
+                r="26"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-dasharray="4 4"
+              />
+              <circle cx="32" cy="32" r="10" fill="currentColor" opacity="0.15" />
+              <circle cx="32" cy="32" r="4" fill="currentColor" opacity="0.6" />
+            </svg>
           </div>
-          <div class="result__progress-track">
-            <div
-              class="result__progress-bar"
-              data-result-bar
-              style="width: 0%"
-            ></div>
+          <p>Aún no se ha generado un diagnóstico.</p>
+        </div>
+
+        <div class="result__loading" data-show-when="loading">
+          <div class="loader" aria-hidden="true"></div>
+          <p>Analizando características celulares…</p>
+        </div>
+
+        <div class="result__error" data-show-when="error">
+          <span class="result__error-icon" aria-hidden="true">!</span>
+          <p data-error-message>Ocurrió un error.</p>
+        </div>
+
+        <div class="result__success" data-show-when="success">
+          <div class="result__badge" data-result-badge>
+            <span class="result__badge-status" data-result-status>—</span>
+          </div>
+
+          <div class="result__detail">
+            <h3 class="result__diagnosis" data-result-diagnosis>—</h3>
+            <p class="result__description" data-result-description>—</p>
+
+            <div class="result__progress">
+              <div class="result__progress-header">
+                <span>Probabilidad</span>
+                <span class="result__probability" data-result-probability>0%</span>
+              </div>
+              <div class="result__progress-track">
+                <div
+                  class="result__progress-bar"
+                  data-result-bar
+                  style="width: 0%"
+                ></div>
+              </div>
+            </div>
+
+            <dl class="result__inputs">
+              <div>
+                <dt>Diámetro celular</dt>
+                <dd data-input-cell_diameter_um>—</dd>
+              </div>
+              <div>
+                <dt>Área celular (px)</dt>
+                <dd data-input-cell_area_px>—</dd>
+              </div>
+              <div>
+                <dt>Perímetro (px)</dt>
+                <dd data-input-perimeter_px>—</dd>
+              </div>
+              <div>
+                <dt>Circularidad</dt>
+                <dd data-input-circularity>—</dd>
+              </div>
+              <div>
+                <dt>Excentricidad</dt>
+                <dd data-input-eccentricity>—</dd>
+              </div>
+              <div>
+                <dt>Hemoglobina</dt>
+                <dd data-input-hemoglobin_g_dl>—</dd>
+              </div>
+            </dl>
           </div>
         </div>
 
-        <dl class="result__inputs">
-          <div>
-            <dt>Diámetro celular</dt>
-            <dd data-input-cell_diameter_um>—</dd>
+        <div class="result__multi" data-show-when="success-batch">
+          <div class="result__batch-dochead" data-batch-dochead hidden></div>
+          <p class="result__multi-summary" data-batch-summary></p>
+          <div
+            class="result__cards"
+            data-batch-cards
+            aria-label="Resultados por muestra"
+          ></div>
+          <div class="result__batch-table" data-batch-table>
+            <div class="result__batch-pro" data-batch-pro></div>
           </div>
-          <div>
-            <dt>Área celular (px)</dt>
-            <dd data-input-cell_area_px>—</dd>
-          </div>
-          <div>
-            <dt>Perímetro (px)</dt>
-            <dd data-input-perimeter_px>—</dd>
-          </div>
-          <div>
-            <dt>Circularidad</dt>
-            <dd data-input-circularity>—</dd>
-          </div>
-          <div>
-            <dt>Excentricidad</dt>
-            <dd data-input-eccentricity>—</dd>
-          </div>
-          <div>
-            <dt>Hemoglobina</dt>
-            <dd data-input-hemoglobin_g_dl>—</dd>
-          </div>
-        </dl>
-      </div>
+        </div>
+      </article>
     </div>
-
-    <div class="result__multi" data-show-when="success-batch">
-      <div class="result__batch-dochead" data-batch-dochead hidden></div>
-      <p class="result__multi-summary" data-batch-summary></p>
-      <div
-        class="result__cards"
-        data-batch-cards
-        aria-label="Resultados por muestra"
-      ></div>
-      <div class="result__batch-table" data-batch-table>
-        <div class="result__batch-pro" data-batch-pro></div>
-      </div>
-    </div>
-    </article>
   </div>
-</section>
+</div>
+{% endblock %}
 
-<section class="section-json" aria-labelledby="json-panel-title">
-  <article class="card card--json">
-    <header class="card__header">
-      <h2 class="card__title" id="json-panel-title">Análisis desde JSON</h2>
-      <p class="card__subtitle">
-        Pega un objeto con las 24 variables, una lista de objetos, o
-        <code>{"muestras": [ {...}, ... ]}</code>. También puedes elegir un
-        archivo <code>.json</code>.
-      </p>
-    </header>
-    <div class="json-panel">
-      <label for="json-input" class="form__label">JSON</label>
-      <textarea
-        id="json-input"
-        class="json-input"
-        rows="10"
-        spellcheck="false"
-        placeholder='Ejemplo una muestra: { "cell_diameter_um": 12.5, "nucleus_area_pct": 35, ... }'
-      ></textarea>
-      <div class="json-panel__row">
-        <input
-          type="file"
-          id="json-file"
-          class="json-file-input"
-          accept=".json,application/json"
-        />
-        <span class="json-file-hint" id="json-file-name"></span>
-      </div>
-      <div class="form__actions json-panel__actions">
-        <button type="button" class="btn btn--primary" id="btn-json-analizar">
-          <span class="btn__label">Analizar desde JSON</span>
-          <span class="btn__spinner" aria-hidden="true"></span>
-        </button>
-        <button type="button" class="btn btn--ghost" id="btn-json-limpiar">
-          Vaciar JSON
-        </button>
-      </div>
-    </div>
-  </article>
-</section>
-{% endblock %} {% block extra_js %}
+{% block extra_js %}
 <script>
   window.BIOCELL_PREDICT_URL = "{% url 'diagnostico:predecir' %}";
   window.BIOCELL_PREDICT_JSON_URL = "{% url 'diagnostico:predecir_json' %}";

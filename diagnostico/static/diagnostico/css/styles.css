@@ -44,12 +44,22 @@
     box-sizing: border-box;
 }
 
-html, body {
+html {
     margin: 0;
     padding: 0;
 }
 
+html, body {
+    margin: 0;
+}
+
+/* Sticky footer: columna flex en viewport; main crece y empuja el footer */
 body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
     font-family: var(--font-sans);
     font-size: 15px;
     line-height: 1.55;
@@ -58,9 +68,6 @@ body {
         radial-gradient(1200px 600px at 10% -10%, var(--color-primary-tint) 0%, transparent 60%),
         radial-gradient(900px 500px at 110% 10%, #e0f2fe 0%, transparent 55%),
         var(--color-bg);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
 }
 
 .container {
@@ -76,6 +83,7 @@ body {
     position: sticky;
     top: 0;
     z-index: 10;
+    flex-shrink: 0;
 }
 
 .topbar__inner {
@@ -148,9 +156,23 @@ body {
 }
 
 /* ---------- Main / Hero ---------- */
-.main {
+main {
     flex: 1;
+    min-height: 0;
+}
+
+.main {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
     padding: 36px 0 56px;
+}
+
+.main > .container {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
 
 .hero {
@@ -159,6 +181,7 @@ body {
     gap: 28px;
     align-items: center;
     margin-bottom: 28px;
+    flex-shrink: 0;
 }
 
 .eyebrow {
@@ -226,12 +249,65 @@ body {
     font-size: 1rem;
 }
 
-/* ---------- Grid principal ---------- */
-.grid {
+/* ---------- Dashboard: dos columnas (entradas | resultados) ---------- */
+.dashboard-layout {
     display: grid;
-    grid-template-columns: 1.05fr 1fr;
-    gap: 24px;
-    align-items: start;
+    grid-template-columns: 1fr;
+    gap: clamp(1.25rem, 3vw, 2rem);
+    align-items: stretch;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+@media (min-width: 1024px) {
+    .dashboard-layout {
+        grid-template-columns: minmax(0, 0.4fr) minmax(0, 0.6fr);
+    }
+}
+
+.dashboard-panel {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    padding: 2rem;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.dashboard-panel--inputs {
+    align-self: start;
+}
+
+@media (min-width: 1024px) {
+    .dashboard-panel--inputs {
+        align-self: stretch;
+    }
+}
+
+.dashboard-panel--results {
+    min-height: min(520px, 70vh);
+}
+
+.dashboard-panel .card--in-dashboard {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+    margin: 0;
+}
+
+.dashboard-panel .card--form.card--in-dashboard + .section-json--in-dashboard {
+    margin: 0;
+    padding-top: 1.75rem;
+    border-top: 1px solid var(--color-border);
+}
+
+.section-json--in-dashboard {
+    margin-top: 0;
 }
 
 .result-column {
@@ -239,6 +315,13 @@ body {
     flex-direction: column;
     gap: 12px;
     min-width: 0;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.dashboard-panel--results .card--result.card--in-dashboard {
+    flex: 1 1 auto;
+    min-height: 280px;
 }
 
 .result-toolbar {
@@ -1171,19 +1254,23 @@ body {
 }
 
 /* ---------- Footer ---------- */
-.footer {
+footer.footer {
+    flex-shrink: 0;
+    padding: 1rem;
+    text-align: center;
     border-top: 1px solid var(--color-border);
     background: rgba(255, 255, 255, 0.65);
-    padding: 18px 0;
     color: var(--color-text-muted);
     font-size: 0.85rem;
 }
 
 .footer__inner {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
     flex-wrap: wrap;
-    gap: 8px;
 }
 
 .footer p {
@@ -1196,8 +1283,7 @@ body {
 
 /* ---------- Responsive ---------- */
 @media (max-width: 880px) {
-    .hero,
-    .grid {
+    .hero {
         grid-template-columns: 1fr;
     }
 
@@ -1207,5 +1293,9 @@ body {
 
     .result__inputs {
         grid-template-columns: 1fr;
+    }
+
+    .dashboard-panel {
+        padding: 1.35rem;
     }
 }
