@@ -1036,6 +1036,22 @@ main {
     font-weight: 600;
 }
 
+/* Estado por fila — tabla de lotes */
+.result-table .tag-estado {
+    display: inline-block;
+    white-space: nowrap;
+}
+
+.result-table .tag-estado--estable {
+    color: var(--color-success-dark);
+    font-weight: 600;
+}
+
+.result-table .tag-estado--alerta {
+    color: var(--color-danger-dark);
+    font-weight: 700;
+}
+
 .result-table .tag-err {
     color: var(--color-danger-dark);
     font-weight: 600;

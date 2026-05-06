@@ -270,7 +270,7 @@
         return null;
     }
 
-    /** Texto para columna Detalles (tabla anormales). */
+    /** Texto para columna Detalles (tabla anormales). Formato por ítem: Label ↑/↓ (valor). */
     function buildDetalleExplicativo(datos) {
         if (!datos) return "Patrón morfológico atípico";
         const partes = [];
@@ -279,7 +279,10 @@
             const dir = direccionFueraDeRango(key, datos[key]);
             if (!dir) return;
             const { label } = RANGOS_REFERENCIA[key];
-            partes.push(dir === "up" ? `${label} ↑` : `${label} ↓`);
+            const valorTxt = formatNumero(datos[key]);
+            partes.push(
+                dir === "up" ? `${label} ↑ (${valorTxt})` : `${label} ↓ (${valorTxt})`
+            );
         });
         return partes.length ? partes.join(", ") : "Patrón morfológico atípico";
     }
@@ -541,10 +544,15 @@
 
     function htmlBatchTableRowOk(r, tone) {
         const cellCls = tone === "normal" ? "result-table__cell--positive" : "result-table__cell--alert";
+        const estable =
+            tone === "normal" && r.es_normal === true;
+        const estadoCell = estable
+            ? `<td><span class="tag-estado tag-estado--estable">Estable</span></td>`
+            : `<td><span class="tag-estado tag-estado--alerta">Alerta</span></td>`;
         return (
             `<tr>` +
             `<td class="num">${r.indice + 1}</td>` +
-            `<td><span class="tag-ok">OK</span></td>` +
+            estadoCell +
             `<td class="${cellCls}">${escapeHtml(r.diagnostico)}</td>` +
             `<td class="num ${cellCls}">${Number(r.probabilidad).toFixed(2)}%</td>` +
             `<td>${escapeHtml(String(r.riesgo))}</td>` +
@@ -558,7 +566,7 @@
         return (
             `<tr>` +
             `<td class="num">${r.indice + 1}</td>` +
-            `<td><span class="tag-ok">OK</span></td>` +
+            `<td><span class="tag-estado tag-estado--alerta">Alerta</span></td>` +
             `<td class="${cellCls}">${escapeHtml(r.diagnostico)}</td>` +
             `<td class="num ${cellCls}">${Number(r.probabilidad).toFixed(2)}%</td>` +
             `<td>${escapeHtml(String(r.riesgo))}</td>` +
