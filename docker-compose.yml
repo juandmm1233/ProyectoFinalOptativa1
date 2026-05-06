@@ -13,6 +13,9 @@ services:
     restart: unless-stopped
     ports:
       - "8030:8030"
+      # Puerto 8000: misma app (gunicorn en 8030 dentro del contenedor).
+      # Útil si el público o el firewall ya apuntaban a :8000.
+      - "8000:8030"
     environment:
       DJANGO_SETTINGS_MODULE: biocell_ai.settings
       PYTHONUNBUFFERED: "1"
