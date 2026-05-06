@@ -72,6 +72,27 @@
         patient_sex: "Sexo (0 F / 1 M)",
     };
 
+    /**
+     * Rangos de referencia aproximados (adultos) para explicabilidad en UI.
+     * Ajusta min/max según tu protocolo clínico o dataset de entrenamiento.
+     */
+    const RANGOS_REFERENCIA = {
+        wbc_count_per_ul: { min: 4500, max: 11000, label: "Leucocitos" },
+        hemoglobin_g_dl: { min: 12.0, max: 16.0, label: "Hemoglobina" },
+        platelet_count_per_ul: { min: 150000, max: 450000, label: "Plaquetas" },
+        cell_area_px: { min: 400, max: 600, label: "Área Celular" },
+        nucleus_area_pct: { min: 25, max: 45, label: "Área Núcleo (%)" },
+        rbc_count_millions_per_ul: { min: 4.5, max: 5.5, label: "Eritrocitos" },
+        hematocrit_pct: { min: 36, max: 48, label: "Hematocrito" },
+        mcv_fl: { min: 80, max: 100, label: "VCM" },
+        mchc_g_dl: { min: 32, max: 36, label: "CHCM" },
+        stain_intensity: { min: 0.35, max: 0.85, label: "Intensidad tinción" },
+        chromatin_density: { min: 0.2, max: 0.55, label: "Densidad cromatina" },
+        cell_diameter_um: { min: 6, max: 12, label: "Diámetro celular" },
+        circularity: { min: 0.75, max: 0.95, label: "Circularidad" },
+        eccentricity: { min: 0.1, max: 0.45, label: "Excentricidad" },
+    };
+
     const UMBRAL_TABLA = 3;
 
     if (!form || !resultadoCard) return;
@@ -231,6 +252,78 @@
         });
     }
 
+    function isValorFueraDeRango(key, rawVal) {
+        const spec = RANGOS_REFERENCIA[key];
+        if (!spec) return false;
+        const num = Number(rawVal);
+        if (Number.isNaN(num)) return false;
+        return num < spec.min || num > spec.max;
+    }
+
+    function direccionFueraDeRango(key, rawVal) {
+        const spec = RANGOS_REFERENCIA[key];
+        if (!spec) return null;
+        const num = Number(rawVal);
+        if (Number.isNaN(num)) return null;
+        if (num < spec.min) return "down";
+        if (num > spec.max) return "up";
+        return null;
+    }
+
+    /** Texto para columna Detalles (tabla anormales). */
+    function buildDetalleExplicativo(datos) {
+        if (!datos) return "Patrón morfológico atípico";
+        const partes = [];
+        Object.keys(RANGOS_REFERENCIA).forEach((key) => {
+            if (!(key in datos)) return;
+            const dir = direccionFueraDeRango(key, datos[key]);
+            if (!dir) return;
+            const { label } = RANGOS_REFERENCIA[key];
+            partes.push(dir === "up" ? `${label} ↑` : `${label} ↓`);
+        });
+        return partes.length ? partes.join(", ") : "Patrón morfológico atípico";
+    }
+
+    /** Quitar resaltados de explicabilidad en el resumen del formulario (vista unitaria). */
+    function clearExplicabilidadSummaryDds() {
+        const root = resultadoCard.querySelector(".result__inputs");
+        if (!root) return;
+        root.querySelectorAll(".valor-anomalo").forEach((el) => {
+            el.classList.remove("valor-anomalo");
+        });
+    }
+
+    /**
+     * Resalta valores fuera de RANGOS_REFERENCIA en los <dd> del bloque resultado (formulario).
+     */
+    function applyExplicabilidadToSummaryDds(esNormal, datos) {
+        clearExplicabilidadSummaryDds();
+        if (esNormal || !datos) return;
+        const mapping = [
+            ["cell_diameter_um", "[data-input-cell_diameter_um]"],
+            ["cell_area_px", "[data-input-cell_area_px]"],
+            ["perimeter_px", "[data-input-perimeter_px]"],
+            ["circularity", "[data-input-circularity]"],
+            ["eccentricity", "[data-input-eccentricity]"],
+            ["hemoglobin_g_dl", "[data-input-hemoglobin_g_dl]"],
+        ];
+        mapping.forEach(([key, sel]) => {
+            const el = resultadoCard.querySelector(sel);
+            if (!el) return;
+            if (isValorFueraDeRango(key, datos[key])) el.classList.add("valor-anomalo");
+        });
+    }
+
+    function collectFormDatosParaExplicabilidad(formDataOpt) {
+        const fd = formDataOpt || new FormData(form);
+        const out = {};
+        Object.keys(RANGOS_REFERENCIA).forEach((k) => {
+            const v = fd.get(k);
+            if (v !== null && v !== "") out[k] = v;
+        });
+        return out;
+    }
+
     function fillSummaryInputsFromDatos(datos) {
         if (!datos) return;
         const keys = [
@@ -276,19 +369,22 @@
             });
         }
 
-        if (datosFuente) {
-            fillSummaryInputsFromDatos(datosFuente);
-        } else {
-            const fd = new FormData(form);
-            fillSummaryInputsFromDatos({
-                cell_area_px: fd.get("cell_area_px"),
-                perimeter_px: fd.get("perimeter_px"),
-                circularity: fd.get("circularity"),
-                eccentricity: fd.get("eccentricity"),
-                cell_diameter_um: fd.get("cell_diameter_um"),
-                hemoglobin_g_dl: fd.get("hemoglobin_g_dl"),
-            });
-        }
+        const fdForm = datosFuente ? null : new FormData(form);
+        const datosResumen = datosFuente
+            ? datosFuente
+            : {
+                  cell_area_px: fdForm.get("cell_area_px"),
+                  perimeter_px: fdForm.get("perimeter_px"),
+                  circularity: fdForm.get("circularity"),
+                  eccentricity: fdForm.get("eccentricity"),
+                  cell_diameter_um: fdForm.get("cell_diameter_um"),
+                  hemoglobin_g_dl: fdForm.get("hemoglobin_g_dl"),
+              };
+        fillSummaryInputsFromDatos(datosResumen);
+        const datosExplic = datosFuente
+            ? datosFuente
+            : Object.assign({}, collectFormDatosParaExplicabilidad(fdForm), datosResumen);
+        applyExplicabilidadToSummaryDds(esNormal, datosExplic);
 
         setState("success");
     }
@@ -356,17 +452,22 @@
         );
     }
 
-    function buildVariablesResumen(datos) {
+    function buildVariablesResumen(datos, destacarAnomalos) {
         if (!datos) return "";
+        const marcar = destacarAnomalos === true;
         const parts = [];
         FEATURE_DISPLAY_ORDER.forEach((key) => {
             if (!(key in datos)) return;
             const label = VAR_LABELS[key] || key;
             const val = formatNumero(datos[key]);
+            const claseValor =
+                marcar && isValorFueraDeRango(key, datos[key])
+                    ? "result-card__grid-value valor-anomalo"
+                    : "result-card__grid-value";
             parts.push(
                 `<div class="result-card__grid-item">` +
                     `<span class="result-card__grid-label">${escapeHtml(label)}</span>` +
-                    `<span class="result-card__grid-value">${escapeHtml(val)}</span>` +
+                    `<span class="${claseValor}">${escapeHtml(val)}</span>` +
                 `</div>`
             );
         });
@@ -405,7 +506,7 @@
                     : "result-card__cell-wrap result-card__cell-wrap--mutant";
                 const iconSvg = esNormal ? svgCellHealthy() : svgCellMutant();
                 const probTxt = `${Number(r.probabilidad).toFixed(2)}%`;
-                const grid = buildVariablesResumen(r.datos);
+                const grid = buildVariablesResumen(r.datos, !esNormal);
 
                 article.innerHTML =
                     `<div class="result-card__top">` +
@@ -451,6 +552,21 @@
         );
     }
 
+    function htmlBatchTableRowAnormalConDetalle(r) {
+        const cellCls = "result-table__cell--alert";
+        const detalle = buildDetalleExplicativo(r.datos);
+        return (
+            `<tr>` +
+            `<td class="num">${r.indice + 1}</td>` +
+            `<td><span class="tag-ok">OK</span></td>` +
+            `<td class="${cellCls}">${escapeHtml(r.diagnostico)}</td>` +
+            `<td class="num ${cellCls}">${Number(r.probabilidad).toFixed(2)}%</td>` +
+            `<td>${escapeHtml(String(r.riesgo))}</td>` +
+            `<td class="result-table__detalle">${escapeHtml(detalle)}</td>` +
+            `</tr>`
+        );
+    }
+
     function htmlBatchTableRowError(r) {
         return (
             `<tr>` +
@@ -461,13 +577,20 @@
         );
     }
 
-    function buildBatchTableWrap(rowsHtml) {
+    function buildBatchTableWrap(rowsHtml, withDetallesColumn) {
+        const head =
+            withDetallesColumn === true
+                ? `<thead><tr>` +
+                  `<th>#</th><th>Estado</th><th>Diagnóstico</th><th>Probabilidad</th><th>Riesgo</th>` +
+                  `<th>Detalles</th>` +
+                  `</tr></thead>`
+                : `<thead><tr>` +
+                  `<th>#</th><th>Estado</th><th>Diagnóstico</th><th>Probabilidad</th><th>Riesgo</th>` +
+                  `</tr></thead>`;
         return (
             `<div class="table-wrap batch-doc-table-wrap">` +
-            `<table class="result-table">` +
-            `<thead><tr>` +
-            `<th>#</th><th>Estado</th><th>Diagnóstico</th><th>Probabilidad</th><th>Riesgo</th>` +
-            `</tr></thead>` +
+            `<table class="result-table${withDetallesColumn ? " result-table--con-detalles" : ""}">` +
+            head +
             `<tbody>${rowsHtml}</tbody>` +
             `</table></div>`
         );
@@ -496,7 +619,7 @@
         }
 
         const theadNormales = resultadosNormales.map((r) => htmlBatchTableRowOk(r, "normal")).join("");
-        const theadAnormales = resultadosAnormales.map((r) => htmlBatchTableRowOk(r, "anormal")).join("");
+        const theadAnormales = resultadosAnormales.map((r) => htmlBatchTableRowAnormalConDetalle(r)).join("");
         const theadErrores = resultadosConError.map((r) => htmlBatchTableRowError(r)).join("");
 
         const emptyNormalMsg =
@@ -511,7 +634,7 @@
             wrapBatchSectionIcon(svgCellHealthy(), "healthy") +
             `</div>` +
             (resultadosNormales.length
-                ? buildBatchTableWrap(theadNormales)
+                ? buildBatchTableWrap(theadNormales, false)
                 : emptyNormalMsg) +
             `</section>`;
 
@@ -522,7 +645,7 @@
             wrapBatchSectionIcon(svgCellMutant(), "mutant") +
             `</div>` +
             (resultadosAnormales.length
-                ? buildBatchTableWrap(theadAnormales)
+                ? buildBatchTableWrap(theadAnormales, true)
                 : emptyAnormalMsg) +
             `</section>`;
 
@@ -533,7 +656,7 @@
                 `<div class="batch-doc-section__head batch-doc-section__head--plain">` +
                 `<h3 class="batch-doc-section__h3" id="batch-h-err">Incidencias de procesamiento</h3>` +
                 `</div>` +
-                buildBatchTableWrap(theadErrores) +
+                buildBatchTableWrap(theadErrores, false) +
                 `</section>`;
         }
 
@@ -642,6 +765,7 @@
         resultadoCard.removeAttribute("data-result");
         resultadoCard.removeAttribute("data-multi-layout");
         clearMultiDom();
+        clearExplicabilidadSummaryDds();
         setState("empty");
     });
 

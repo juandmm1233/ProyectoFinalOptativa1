@@ -952,6 +952,11 @@ main {
     color: var(--color-text);
 }
 
+.result-card__grid-value.valor-anomalo {
+    color: var(--color-danger);
+    font-weight: 700;
+}
+
 .result-card--error .result-card__diag--error-label {
     font-size: 1.05rem;
     color: var(--color-danger-dark);
@@ -1011,6 +1016,19 @@ main {
 
 .result-table td.num {
     font-variant-numeric: tabular-nums;
+}
+
+.result-table__detalle {
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--color-text);
+    line-height: 1.45;
+    max-width: 24rem;
+}
+
+.result-table--con-detalles tbody tr td:last-child {
+    white-space: normal;
+    word-break: break-word;
 }
 
 .result-table .tag-ok {
@@ -1251,6 +1269,11 @@ main {
     font-weight: 600;
     color: var(--color-text);
     font-variant-numeric: tabular-nums;
+}
+
+.result__inputs dd.valor-anomalo {
+    color: var(--color-danger);
+    font-weight: 700;
 }
 
 /* ---------- Footer ---------- */
