@@ -1,4 +1,4 @@
-# BioCell AI
+# BioCell AI  Autores: Juan Diego Martinez Morales, Kevin Julian Guerrero, Jhonantan Alejandro Beltran
 
 **Sistema web para el diagnóstico automatizado de células sanguíneas**, construido sobre Django 5 y un modelo Random Forest pre‑entrenado (`scikit-learn`).
 
