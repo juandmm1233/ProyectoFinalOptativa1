@@ -204,7 +204,7 @@ docker run --rm -p 8000:8000 --name biocell-ai biocell-ai
 
 ### Detalles importantes
 
-- La imagen se basa en `python:3.12-slim` y corre como un usuario sin privilegios (`biocell`).
+- La imagen se basa en `python:3.12-slim-bookworm` (Debian 12) y corre como un usuario sin privilegios (`biocell`).
 - Durante la build se ejecuta `python manage.py collectstatic --noinput` para que WhiteNoise pueda servir el CSS / JS.
 - El modelo `ia_celulas_sanguineas_rf_v1.pkl` viaja **dentro** de la imagen (vía `COPY . .`). En `docker-compose.yml` además se monta `./core/ml_models` como volumen de solo lectura, lo que permite intercambiar el modelo sin reconstruir la imagen.
 - La base SQLite se persiste en el volumen nombrado `biocell_db`.

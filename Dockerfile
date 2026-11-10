@@ -1,10 +1,13 @@
 # =========================================================
 # BioCell AI — Dockerfile
-# Imagen ligera basada en Python 3.12-slim que empaqueta
-# Django + el modelo Random Forest entrenado y lo expone
-# en el puerto 8000 mediante gunicorn.
+# Imagen ligera basada en Python 3.12 (Debian 12) que
+# empaqueta Django + el modelo Random Forest entrenado y
+# lo expone en el puerto 8000 mediante gunicorn.
 # =========================================================
-FROM python:3.12-slim
+# python:3.12-slim (sin sufijo) hoy es Debian 13 "trixie".
+# En el laboratorio apt recibió 404 al pedir trixie, trixie-updates
+# y trixie-security. bookworm sigue publicado y es estable.
+FROM python:3.12-slim-bookworm
 
 # Buenas prácticas para Python en contenedores.
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -16,8 +19,19 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # Dependencias del sistema necesarias para compilar wheels de
 # scikit-learn / numpy / pandas en caso de que pip no encuentre
 # wheels precompilados para la arquitectura del host.
-RUN apt-get update \
- && apt-get install -y --no-install-recommends \
+# libgomp1 es la runtime de OpenMP que esos wheels exigen al importar.
+# Si deb.debian.org (Fastly) vuelve a responder 404, se usa otro espejo.
+RUN set -eux; \
+    if ! apt-get update -o Acquire::Retries=5; then \
+      printf '%s\n' \
+        'deb http://mirror.csclub.uwaterloo.ca/debian bookworm main' \
+        'deb http://mirror.csclub.uwaterloo.ca/debian bookworm-updates main' \
+        'deb http://mirror.csclub.uwaterloo.ca/debian-security bookworm-security main' \
+        > /etc/apt/sources.list; \
+      rm -f /etc/apt/sources.list.d/debian.sources; \
+      apt-get update -o Acquire::Retries=5; \
+    fi; \
+    apt-get install -y --no-install-recommends \
         build-essential \
         libgomp1 \
  && rm -rf /var/lib/apt/lists/*
