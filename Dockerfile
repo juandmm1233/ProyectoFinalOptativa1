@@ -4,9 +4,8 @@
 # empaqueta Django + el modelo Random Forest entrenado y
 # lo expone en el puerto 8000 mediante gunicorn.
 # =========================================================
-# python:3.12-slim (sin sufijo) hoy es Debian 13 "trixie".
-# En el laboratorio apt recibió 404 al pedir trixie, trixie-updates
-# y trixie-security. bookworm sigue publicado y es estable.
+# bookworm (Debian 12) queda fijado para no seguir el tag flotante
+# python:3.12-slim, que ahora apunta a Debian 13.
 FROM python:3.12-slim-bookworm
 
 # Buenas prácticas para Python en contenedores.
@@ -16,32 +15,18 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     DJANGO_SETTINGS_MODULE=biocell_ai.settings
 
-# Dependencias del sistema necesarias para compilar wheels de
-# scikit-learn / numpy / pandas en caso de que pip no encuentre
-# wheels precompilados para la arquitectura del host.
-# libgomp1 es la runtime de OpenMP que esos wheels exigen al importar.
-# Si deb.debian.org (Fastly) vuelve a responder 404, se usa otro espejo.
-RUN set -eux; \
-    if ! apt-get update -o Acquire::Retries=5; then \
-      printf '%s\n' \
-        'deb http://mirror.csclub.uwaterloo.ca/debian bookworm main' \
-        'deb http://mirror.csclub.uwaterloo.ca/debian bookworm-updates main' \
-        'deb http://mirror.csclub.uwaterloo.ca/debian-security bookworm-security main' \
-        > /etc/apt/sources.list; \
-      rm -f /etc/apt/sources.list.d/debian.sources; \
-      apt-get update -o Acquire::Retries=5; \
-    fi; \
-    apt-get install -y --no-install-recommends \
-        build-essential \
-        libgomp1 \
- && rm -rf /var/lib/apt/lists/*
+# Sin apt-get: en el laboratorio deb.debian.org y otros espejos
+# responden 404 al pedir el Release, así que no se instalan paquetes
+# del sistema. numpy, pandas y scikit-learn traen wheels con sus
+# propias librerías (OpenMP, gfortran); no hace falta libgomp1 ni
+# build-essential.
 
 WORKDIR /app
 
 # Instalar dependencias Python primero (mejora el cacheo de capas).
 COPY requirements.txt .
-RUN pip install --upgrade pip \
- && pip install -r requirements.txt
+RUN pip install --upgrade pip --root-user-action=ignore \
+ && pip install --root-user-action=ignore -r requirements.txt
 
 # Copiar el código fuente del proyecto.
 COPY . .
